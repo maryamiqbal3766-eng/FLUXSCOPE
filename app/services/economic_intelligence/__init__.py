@@ -8,7 +8,7 @@ from .schemas import (
 from .source_registry import ApprovedSourceRegistry
 from .verifier import EconomicEvidenceVerifier
 from .retrieval import LocalEconomicRetriever
-from .monitor import EconomicMonitor
+from .monitor import EconomicMonitor, UnapprovedSourceError
 from .extractor import EconomicShockExtractor
 from .service import EconomicIntelligenceService
 
@@ -22,5 +22,6 @@ __all__ = [
     "EconomicEvidenceVerifier",
     "LocalEconomicRetriever",
     "EconomicMonitor",
+    "UnapprovedSourceError",
     "EconomicIntelligenceService",
 ]

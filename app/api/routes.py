@@ -1,8 +1,12 @@
+import json
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from groq import APIError as GroqAPIError
+from pydantic import ValidationError
 
+from app.core.errors import ContractError
 from app.models.domain import (
     BusinessIntakeDraft,
     BusinessProfile,
@@ -22,10 +26,13 @@ from app.models.domain import (
     ScenarioUpdate,
 )
 from app.services.orchestrator import WorkflowOrchestrator
+from app.services.groq import GroqConfigurationError
 from app.services.economic_intelligence import (
+    ApprovedSourceRegistry,
     EconomicIntelligenceService,
     SourceDocument,
     ShockCandidate,
+    UnapprovedSourceError,
 )
 
 router = APIRouter()
@@ -49,12 +56,82 @@ EconomicIntelligence = Annotated[
     Depends(get_economic_intelligence),
 ]
 
+def approved_sources_text() -> str:
+    return "; ".join(
+        f"{source.publisher} ({', '.join(source.domains)})"
+        for source in ApprovedSourceRegistry().sources
+    )
+
+
 @router.post("/detect", response_model=list[ShockCandidate])
 def detect_economic_shocks(
     payload: SourceDocument,
     service: EconomicIntelligence,
 ) -> list[ShockCandidate]:
-    return service.detect(payload)
+    try:
+        return service.detect(payload)
+    except UnapprovedSourceError as exc:
+        raise ContractError(
+            422,
+            "VERIFICATION_REQUIRED",
+            "The source is not on the approved-source registry. The publisher must match "
+            f"the source URL's domain. Approved: {approved_sources_text()}.",
+            stage="DETECT",
+            required_fields=["publisher", "source_url"],
+        ) from exc
+    except GroqConfigurationError as exc:
+        raise ContractError(
+            424,
+            "UPSTREAM_UNAVAILABLE",
+            f"Economic shock extraction is not configured on the backend: {exc} "
+            "Set GROQ_API_KEY and GROQ_MODEL before starting the API.",
+            stage="DETECT",
+        ) from exc
+    except GroqAPIError as exc:
+        raise ContractError(
+            424,
+            "UPSTREAM_UNAVAILABLE",
+            f"The extraction service could not be reached or refused the request ({type(exc).__name__}).",
+            stage="DETECT",
+        ) from exc
+    except (json.JSONDecodeError, KeyError, ValidationError, ValueError) as exc:
+        raise ContractError(
+            500,
+            "PROCESSING_FAILED",
+            "The extraction output could not be validated against the shock contract; "
+            "no shock was produced.",
+            stage="DETECT",
+        ) from exc
+
+
+@router.get("/detect/approved-sources")
+def list_approved_sources() -> list[dict[str, object]]:
+    return [
+        {"publisher": source.publisher, "domains": list(source.domains), "role": source.role}
+        for source in ApprovedSourceRegistry().sources
+    ]
+
+
+@router.post(
+    "/shocks/from-detection/{shock_id}",
+    response_model=EconomicShockEvent,
+    status_code=status.HTTP_201_CREATED,
+)
+def register_detected_shock(
+    shock_id: UUID,
+    detection: EconomicIntelligence,
+    service: Orchestrator,
+) -> EconomicShockEvent:
+    candidate = detection.get_event(str(shock_id))
+    source = detection.get_source(str(shock_id))
+    if candidate is None or source is None:
+        raise ContractError(
+            404,
+            "RESOURCE_NOT_FOUND",
+            "Detected shock candidate was not found. Run DETECT first.",
+            stage="DETECT",
+        )
+    return service.register_detected_shock(candidate, source)
 
 @router.post("/shocks", response_model=EconomicShockEvent, status_code=status.HTTP_201_CREATED)
 def create_shock(payload: EconomicShockCreate, service: Orchestrator) -> EconomicShockEvent:
@@ -111,9 +188,14 @@ def create_decision(payload: DecisionCreate, service: Orchestrator) -> HumanDeci
     return service.create_decision(payload)
 
 
-@router.post("/comparisons")
-def create_comparison(payload: ComparisonCreate, service: Orchestrator) -> None:
-    service.request_comparison(payload)
+@router.post("/comparisons", status_code=status.HTTP_201_CREATED)
+def create_comparison(payload: ComparisonCreate, service: Orchestrator):
+    return service.request_comparison(payload)
+
+
+@router.get("/comparisons/{comparison_id}")
+def get_comparison(comparison_id: UUID, service: Orchestrator):
+    return service.get_comparison(comparison_id)
 
 
 @router.post("/decisions/{decision_id}/confirm", response_model=HumanDecision)

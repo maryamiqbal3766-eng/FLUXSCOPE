@@ -1,16 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { checkBackendHealth, detectEconomicShocks, type ShockCandidate } from "../lib/api";
-
-type StageKey =
-  | "detect"
-  | "trace"
-  | "quantify"
-  | "simulate"
-  | "compare"
-  | "respond"
-  | "monitor";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  API_BASE_URL,
+  checkBackendHealth,
+  type BusinessProfile,
+  type ComparisonSet,
+  type EconomicShockEvent,
+  type HumanDecision,
+  type ImpactGraph,
+  type ImpactResultRecord,
+} from "../lib/api";
+import { formatSigned, humanize, type StageKey, type StageStatus } from "../lib/workflow";
+import CompareStage from "../components/workflow/CompareStage";
+import DetectStage from "../components/workflow/DetectStage";
+import MonitorStage, { type MonitoringEntry } from "../components/workflow/MonitorStage";
+import QuantifyStage from "../components/workflow/QuantifyStage";
+import RespondStage from "../components/workflow/RespondStage";
+import SimulateStage, { type ScenarioRun } from "../components/workflow/SimulateStage";
+import TraceStage from "../components/workflow/TraceStage";
 
 type Language = "en" | "ur";
 
@@ -21,107 +29,25 @@ type Stage = {
   descEn: string;
   descUr: string;
   icon: string;
-  questionEn: string;
-  questionUr: string;
 };
 
 const stages: Stage[] = [
-  {
-    key: "detect",
-    en: "DETECT",
-    ur: "کھوج",
-    descEn: "Identify an economic change early.",
-    descUr: "معاشی تبدیلی کو بروقت شناخت کریں۔",
-    icon: "⌕",
-    questionEn: "What’s changing?",
-    questionUr: "کیا بدل رہا ہے؟",
-  },
-  {
-    key: "trace",
-    en: "TRACE",
-    ur: "تجزیہ",
-    descEn: "Map the change through your business.",
-    descUr: "تبدیلی کے کاروباری اثرات کا راستہ سمجھیں۔",
-    icon: "⌘",
-    questionEn: "How does it reach your business?",
-    questionUr: "یہ آپ کے کاروبار تک کیسے پہنچتا ہے؟",
-  },
-  {
-    key: "quantify",
-    en: "QUANTIFY",
-    ur: "حساب",
-    descEn: "Measure the verified financial effect.",
-    descUr: "تصدیق شدہ مالی اثرات کی پیمائش کریں۔",
-    icon: "▥",
-    questionEn: "What is the measurable impact?",
-    questionUr: "قابلِ پیمائش اثر کتنا ہے؟",
-  },
-  {
-    key: "simulate",
-    en: "SIMULATE",
-    ur: "محاکات",
-    descEn: "Explore different response assumptions.",
-    descUr: "مختلف ردِعمل کے مفروضے آزمائیں۔",
-    icon: "≋",
-    questionEn: "What if you respond differently?",
-    questionUr: "اگر آپ مختلف ردِعمل دیں تو کیا ہوگا؟",
-  },
-  {
-    key: "compare",
-    en: "COMPARE",
-    ur: "موازنہ",
-    descEn: "See transparent trade-offs side by side.",
-    descUr: "مختلف راستوں کے نتائج کا شفاف موازنہ کریں۔",
-    icon: "⚖",
-    questionEn: "What are the trade-offs?",
-    questionUr: "مختلف راستوں میں کیا فرق ہے؟",
-  },
-  {
-    key: "respond",
-    en: "RESPOND",
-    ur: "عمل",
-    descEn: "Choose and record the owner’s response.",
-    descUr: "کاروباری مالک کا منتخب کردہ ردِعمل درج کریں۔",
-    icon: "▤",
-    questionEn: "What response will you take?",
-    questionUr: "آپ کیا ردِعمل اختیار کریں گے؟",
-  },
-  {
-    key: "monitor",
-    en: "MONITOR",
-    ur: "نگرانی",
-    descEn: "Track actual results against projections.",
-    descUr: "حقیقی نتائج کو اندازوں کے مقابلے میں دیکھیں۔",
-    icon: "↗",
-    questionEn: "Is reality tracking the projection?",
-    questionUr: "کیا حقیقی نتائج اندازے کے مطابق ہیں؟",
-  },
+  { key: "detect", en: "DETECT", ur: "کھوج", descEn: "Identify an economic change early.", descUr: "معاشی تبدیلی کو بروقت شناخت کریں۔", icon: "⌕" },
+  { key: "trace", en: "TRACE", ur: "تجزیہ", descEn: "Map the change through your business.", descUr: "تبدیلی کے کاروباری اثرات کا راستہ سمجھیں۔", icon: "⌘" },
+  { key: "quantify", en: "QUANTIFY", ur: "حساب", descEn: "Measure the verified financial effect.", descUr: "تصدیق شدہ مالی اثرات کی پیمائش کریں۔", icon: "▥" },
+  { key: "simulate", en: "SIMULATE", ur: "محاکات", descEn: "Explore different response assumptions.", descUr: "مختلف ردِعمل کے مفروضے آزمائیں۔", icon: "≋" },
+  { key: "compare", en: "COMPARE", ur: "موازنہ", descEn: "See transparent trade-offs side by side.", descUr: "مختلف راستوں کے نتائج کا شفاف موازنہ کریں۔", icon: "⚖" },
+  { key: "respond", en: "RESPOND", ur: "عمل", descEn: "Choose and record the owner’s response.", descUr: "کاروباری مالک کا منتخب کردہ ردِعمل درج کریں۔", icon: "▤" },
+  { key: "monitor", en: "MONITOR", ur: "نگرانی", descEn: "Track actual results against projections.", descUr: "حقیقی نتائج کو اندازوں کے مقابلے میں دیکھیں۔", icon: "↗" },
 ];
 
 function ImpactMark({ compact = false }: { compact?: boolean }) {
   return (
-    <div
-      className={`brand ${compact ? "brandCompact" : ""}`}
-      aria-label="FLUXSCOPE"
-    >
-      <svg
-        className="brandMark"
-        viewBox="0 0 64 64"
-        role="img"
-        aria-label="FLUXSCOPE logo"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <path
-          d="M10 8H38V18H20V28H32V38H10V8Z"
-          fill="currentColor"
-        />
-
-        <path
-          d="M54 56H26V46H44V36H32V26H54V56Z"
-          fill="currentColor"
-        />
+    <div className={`brand ${compact ? "brandCompact" : ""}`} aria-label="FLUXSCOPE">
+      <svg className="brandMark" viewBox="0 0 64 64" role="img" aria-label="FLUXSCOPE logo" preserveAspectRatio="xMidYMid meet">
+        <path d="M10 8H38V18H20V28H32V38H10V8Z" fill="currentColor" />
+        <path d="M54 56H26V46H44V36H32V26H54V56Z" fill="currentColor" />
       </svg>
-
       <div className="brandWord">
         <span>FLUXSCOPE</span>
       </div>
@@ -130,90 +56,162 @@ function ImpactMark({ compact = false }: { compact?: boolean }) {
 }
 
 export default function Home() {
-  const [active, setActive] = useState<StageKey>("detect");
   const [language, setLanguage] = useState<Language>("en");
-  const [priceChange, setPriceChange] = useState(4);
-  const [materialChange, setMaterialChange] = useState(-15);
-  const [confirmed, setConfirmed] = useState(false);
-const [backendStatus, setBackendStatus] = useState<
-  "checking" | "connected" | "disconnected"
->("checking");
-  const [detectedShocks, setDetectedShocks] = useState<ShockCandidate[]>([]);
+  const [backendStatus, setBackendStatus] = useState<"checking" | "connected" | "disconnected">("checking");
+
+  /* ---------------- Workflow state (IDs and records returned by the backend) ---------------- */
+  const [shock, setShockState] = useState<EconomicShockEvent | null>(null);
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [profile, setProfileState] = useState<BusinessProfile | null>(null);
+  const [mapping, setMappingState] = useState<ImpactGraph | null>(null);
+  const [impact, setImpactState] = useState<ImpactResultRecord | null>(null);
+  const [quantifyBlocker, setQuantifyBlocker] = useState<string | null>(null);
+  const [requestedFields, setRequestedFields] = useState<string[]>([]);
+  const [runs, setRuns] = useState<ScenarioRun[]>([]);
+  const [comparison, setComparisonState] = useState<ComparisonSet | null>(null);
+  const [decision, setDecisionState] = useState<HumanDecision | null>(null);
+  const [monitoring, setMonitoring] = useState<MonitoringEntry[]>([]);
 
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ur" ? "rtl" : "ltr";
-
     return () => {
       document.documentElement.lang = "en";
       document.documentElement.dir = "ltr";
     };
   }, [language]);
+
   useEffect(() => {
     checkBackendHealth()
-      .then(() => {
-        setBackendStatus("connected");
-      })
-      .catch(() => {
-        setBackendStatus("disconnected");
-      });
+      .then(() => setBackendStatus("connected"))
+      .catch(() => setBackendStatus("disconnected"));
   }, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-        if (visible)
-          setActive(visible.target.id.replace("stage-", "") as StageKey);
-      },
-      {
-        rootMargin: "-25% 0px -55% 0px",
-        threshold: [0.1, 0.35, 0.65],
-      },
-    );
-
-    stages.forEach((stage) => {
-      const element = document.getElementById(`stage-${stage.key}`);
-      if (element) observer.observe(element);
-    });
-
-    return () => observer.disconnect();
+  /* Upstream changes invalidate every downstream record built on them. */
+  const clearFromMapping = useCallback(() => {
+    setMappingState(null);
+    setImpactState(null);
+    setQuantifyBlocker(null);
+    setRuns([]);
+    setComparisonState(null);
+    setDecisionState(null);
+    setMonitoring([]);
   }, []);
 
-  const activeIndex = Math.max(
-    0,
-    stages.findIndex((stage) => stage.key === active),
+  const selectShock = useCallback(
+    (next: EconomicShockEvent) => {
+      setShockState(next);
+      clearFromMapping();
+    },
+    [clearFromMapping],
   );
+
+  const confirmProfile = useCallback(
+    (next: BusinessProfile) => {
+      setProfileState(next);
+      setRequestedFields([]);
+      clearFromMapping();
+    },
+    [clearFromMapping],
+  );
+
+  const setMapping = useCallback((next: ImpactGraph) => {
+    setMappingState(next);
+    setImpactState(null);
+    setQuantifyBlocker(null);
+    setRuns([]);
+    setComparisonState(null);
+    setDecisionState(null);
+    setMonitoring([]);
+  }, []);
+
+  const setImpact = useCallback((next: ImpactResultRecord) => {
+    setImpactState(next);
+    setRuns([]);
+    setComparisonState(null);
+    setDecisionState(null);
+    setMonitoring([]);
+  }, []);
+
+  const setComparison = useCallback((next: ComparisonSet) => {
+    setComparisonState(next);
+    setDecisionState(null);
+    setMonitoring([]);
+  }, []);
+
+  const setDecision = useCallback(
+    (next: HumanDecision) => {
+      if (decision?.id !== next.id) setMonitoring([]);
+      setDecisionState(next);
+    },
+    [decision],
+  );
+
+  /* The business_id path segment is client-supplied in the API contract (there is no
+     business-creation endpoint), so one ID is generated for this browser session. */
+  const ensureBusinessId = useCallback(() => {
+    if (businessId) return businessId;
+    const id = crypto.randomUUID();
+    setBusinessId(id);
+    return id;
+  }, [businessId]);
+
+  /* ---------------- Stage statuses derived from real workflow state ---------------- */
+  const completedRuns = runs.filter((run) => run.result).length;
+  const statuses: Record<StageKey, StageStatus> = useMemo(
+    () => ({
+      detect: shock
+        ? { tone: "done", label: `Shock selected · ${shock.verification_status}` }
+        : { tone: "ready", label: "No source analysed yet" },
+      trace: !shock
+        ? { tone: "locked", label: "Waiting for DETECT" }
+        : mapping
+          ? { tone: "done", label: "Impact mapping available" }
+          : profile
+            ? { tone: "ready", label: "Business confirmed · mapping needed" }
+            : { tone: "ready", label: "Business data missing" },
+      quantify: !mapping
+        ? { tone: "locked", label: "Waiting for TRACE" }
+        : impact
+          ? { tone: "done", label: "Calculated" }
+          : quantifyBlocker
+            ? {
+                tone: "blocked",
+                label: quantifyBlocker === "UNSUPPORTED_SHOCK_TYPE" ? "Unsupported shock type" : "Blocked · see details",
+              }
+            : { tone: "ready", label: "Ready to calculate" },
+      simulate: !impact
+        ? { tone: "locked", label: "Waiting for QUANTIFY" }
+        : completedRuns > 0
+          ? { tone: "done", label: `${completedRuns} scenario(s) simulated` }
+          : runs.length > 0
+            ? { tone: "ready", label: "Draft · confirm and run" }
+            : { tone: "ready", label: "Assumptions missing" },
+      compare: completedRuns === 0
+        ? { tone: "locked", label: "Waiting for SIMULATE" }
+        : comparison
+          ? { tone: "done", label: "Compared" }
+          : { tone: "ready", label: "Ready to compare" },
+      respond: !comparison
+        ? { tone: "locked", label: "Waiting for COMPARE" }
+        : decision?.decision_status === "confirmed"
+          ? { tone: "done", label: "Decision confirmed" }
+          : decision
+            ? { tone: "ready", label: "Awaiting your confirmation" }
+            : { tone: "ready", label: "No response recorded" },
+      monitor: decision?.decision_status !== "confirmed"
+        ? { tone: "locked", label: "Waiting for RESPOND" }
+        : monitoring.length > 0
+          ? { tone: "done", label: `${monitoring.length} result(s) compared` }
+          : { tone: "ready", label: "Awaiting actual results" },
+    }),
+    [shock, mapping, profile, impact, quantifyBlocker, runs.length, completedRuns, comparison, decision, monitoring.length],
+  );
+
+  const currentStage: StageKey =
+    stages.find((stage) => statuses[stage.key].tone !== "done")?.key ?? "monitor";
 
   const isUrdu = language === "ur";
-
-  async function handleDetect() {
-    try {
-      const shocks = await detectEconomicShocks({
-        title: "FLUXSCOPE economic signal",
-        publisher: "State Bank of Pakistan",
-        source_url: "https://www.sbp.org.pk/",
-        source_domain: "sbp.org.pk",
-        content:
-          "This source document is ready for economic shock detection. Verified source content will be supplied here.",
-      });
-
-      setDetectedShocks(shocks);
-    } catch (error) {
-      console.error("DETECT failed:", error);
-    }
-  }
-
-  const scenarioSummary = useMemo(
-    () =>
-      isUrdu
-        ? `قیمت ${priceChange >= 0 ? "+" : ""}${priceChange}% · درآمدی مواد ${materialChange}%`
-        : `Price ${priceChange >= 0 ? "+" : ""}${priceChange}% · imported material ${materialChange}%`,
-    [isUrdu, priceChange, materialChange],
-  );
 
   const copy = isUrdu
     ? {
@@ -221,212 +219,98 @@ const [backendStatus, setBackendStatus] = useState<
         how: "طریقۂ کار",
         features: "خصوصیات",
         about: "تعارف",
-
         eyebrow: "پاکستانی ایس ایم ایز کے لیے کاروباری اثرات کی ذہانت",
-
-        slogan:
-          "جب معیشت بدلتی ہے، جانیں کہ آپ کے کاروبار میں کیا بدلتا ہے۔",
-
+        slogan: "جب معیشت بدلتی ہے، جانیں کہ آپ کے کاروبار میں کیا بدلتا ہے۔",
         titleA: "غیریقینی کو",
         titleB: "باخبر فیصلوں میں بدلیں۔",
-
         body: "FLUXSCOPE معاشی تبدیلیوں کو سمجھنے، ان کے کاروباری اثرات دیکھنے، مختلف راستے آزمانے اور اپنے ردِعمل کا فیصلہ کرنے میں مدد دیتا ہے۔",
-
         start: "شروع کریں",
         learn: "طریقۂ کار دیکھیں",
-
-        trust:
-          "تصدیق شدہ ذرائع، شفاف حسابات اور کاروباری مالک کے اختیار پر مبنی۔",
-
+        trust: "تصدیق شدہ ذرائع، شفاف حسابات اور کاروباری مالک کے اختیار پر مبنی۔",
         intelligence: "کاروباری ذہانت",
         welcome: "FLUXSCOPE میں خوش آمدید",
-        subline: "سمجھیں۔ محاکات کریں۔ فیصلہ کریں۔",
-
         signal: "معاشی اشارہ",
         impact: "کاروباری اثر",
         responses: "ردِعمل کے اختیارات",
-
-        waitingData: "تصدیق شدہ معلومات کا انتظار",
-        profile: "پروفائل منسلک نہیں",
-        ready: "محاکات کے لیے تیار",
-
-        details: "تفصیلات دیکھیں →",
-        analysis: "تجزیہ دیکھیں →",
-        explore: "اختیارات دیکھیں →",
-
         journey: "فیصلے کا سفر",
         fromSignal: "اشارے سے ردِعمل تک",
-        stages: "مراحل",
-        changed: "کیا بدلا؟",
-        enters: "اثر کاروبار تک کیسے پہنچتا ہے؟",
-        measured: "کیا ناپا جا سکتا ہے؟",
-        couldDo: "آپ کیا ردِعمل دے سکتے ہیں؟",
-
-        floating: "فیصلے کا ۷ مرحلوں کا سفر",
-
+        stagesLabel: "مراحل",
         method: "FLUXSCOPE کا طریقۂ کار",
         introTitleA: "جو بدلا ہے وہاں سے",
         introTitleB: "آپ کے فیصلے تک۔",
-
         intro: "FLUXSCOPE کاروباری مالک کی جگہ فیصلہ نہیں کرتا۔ یہ معاشی اشارے سے کاروباری ردِعمل تک کے راستے کو سمجھنے، حساب کرنے، آزمانے، موازنہ کرنے اور نگرانی کرنے میں آسان بناتا ہے۔",
-
         rule1: "تصدیق شدہ معلومات",
         rule2: "متعین حسابات",
         rule3: "شفاف محاکات",
         rule4: "کاروباری مالک کے اختیار میں فیصلہ",
-
-        waitingEvent: "تصدیق شدہ معاشی واقعے کا انتظار ہے",
-        approvedSources:
-          "منظور شدہ ذرائع سے موصول ہونے والی معاشی معلومات یہاں ظاہر ہوں گی۔",
-        connect: "معلومات دیکھیں →",
-
-        notConnected: "منسلک نہیں",
-        verifiedRequired: "تصدیق شدہ معلومات درکار",
-        calculatedEngine: "انجن کے ذریعے حساب ہوگا",
-        scenarioDraft: "محاکات کا مسودہ",
-        testResponse: "ردِعمل آزمائیں",
-        ownerConfirmation: "مالک کی تصدیق درکار",
-        changePrice: "فروخت کی قیمت تبدیل کریں",
-        materialCost: "درآمدی مواد کی لاگت",
-        draftSaved: "مسودہ محفوظ ہو گیا",
-        saveDraft: "مسودہ محفوظ کریں",
-        uiOnly:
-          "یہ کنٹرولز منظرِ عام پر موجود پروٹوٹائپ دکھاتے ہیں؛ حتمی حساب متعین محاکاتی انجن سے ہوگا۔",
-
-        option: "اختیار",
-        response: "ردِعمل",
-        result: "اثر",
-        awaitingCalculation: "حساب کا انتظار",
-        ownerResponse: "مالک کا ردِعمل",
-        noResponse: "ابھی کوئی ردِعمل درج نہیں",
-        reviewThenChoose:
-          "تصدیق شدہ موازنے کا جائزہ لیں، پھر اپنا ردِعمل منتخب اور محفوظ کریں۔",
-        reviewOptions: "اختیارات دیکھیں →",
-
-        notStarted: "شروع نہیں ہوا",
-        monitorTitle:
-          "نگرانی ابھی شروع نہیں ہوئی۔ تصدیق شدہ ردِعمل اور حقیقی نتائج درکار ہیں۔",
-        actualProjected: "حقیقی بمقابلہ متوقع",
-        awaitingData: "معلومات کا انتظار",
-        variance: "فرق",
-        reassessment: "دوبارہ جائزہ",
-        notRequired: "درکار نہیں",
-
-        closingEyebrow: "FLUXSCOPE",
         closingTitleA: "سمجھیں۔",
         closingTitleB: "محاکات کریں۔",
         closingTitleC: "فیصلہ کریں.",
-        closingBody:
-          "پاکستانی ایس ایم ایز کے لیے فیصلہ سازی کا نظام، جو تصدیق شدہ معلومات، شفاف حسابات اور کاروباری مالک کے اختیار پر مبنی ہے۔",
+        closingBody: "پاکستانی ایس ایم ایز کے لیے فیصلہ سازی کا نظام، جو تصدیق شدہ معلومات، شفاف حسابات اور کاروباری مالک کے اختیار پر مبنی ہے۔",
         back: "اوپر جائیں",
-        footer: "© 2026 FLUXSCOPE۔ پروڈکٹ پروٹوٹائپ۔",
+        footer: "© 2026 FLUXSCOPE۔ ڈیمو۔",
         footerTag: "سمجھیں · محاکات کریں · فیصلہ کریں",
+        workflowNote: "ورک فلو کے فارم انگریزی میں ہیں۔",
       }
     : {
         home: "Home",
         how: "How It Works",
         features: "Features",
         about: "About",
-
         eyebrow: "ECONOMIC IMPACT INTELLIGENCE FOR PAKISTANI SMEs",
-
         slogan: "Where Economic Change Meets Business Reality.",
-
         titleA: "Turn uncertainty into",
         titleB: "Informed Decisions.",
-
         body: "FLUXSCOPE helps you understand economic changes, measure their impact on your business, explore different responses, and decide what to do.",
-
-        start: "Get Started",
+        start: "Start with DETECT",
         learn: "See How It Works",
-
-        trust:
-          "Built around verified sources, transparent calculations, and decisions that remain with the business owner.",
-
-        intelligence: "BUSINESS INTELLIGENCE",
-        welcome: "Welcome to FLUXSCOPE",
-        subline: "Understand. Simulate. Decide.",
-
+        trust: "Built around verified sources, transparent calculations, and decisions that remain with the business owner.",
+        intelligence: "YOUR WORKFLOW",
+        welcome: "Live workflow status",
         signal: "ECONOMIC SIGNAL",
         impact: "BUSINESS IMPACT",
-        responses: "RESPONSE OPTIONS",
-
-        waitingData: "Awaiting verified data",
-        profile: "Profile not connected",
-        ready: "Ready to simulate",
-
-        details: "View details →",
-        analysis: "See analysis →",
-        explore: "Explore options →",
-
+        responses: "RESPONSE",
         journey: "THE DECISION JOURNEY",
         fromSignal: "From signal to response",
-        stages: "07 stages",
-        changed: "What changed?",
-        enters: "Where does it enter?",
-        measured: "What can be measured?",
-        couldDo: "What could you do?",
-
-        floating: "7-stage decision journey",
-
+        stagesLabel: "07 stages",
         method: "THE FLUXSCOPE METHOD",
         introTitleA: "From what changed",
         introTitleB: "to what you decide.",
-
-        intro: "FLUXSCOPE does not make the decision for the business owner. It makes the path from economic signal to business response easier to understand, calculate, test, compare, and monitor.",
-
+        intro: "FLUXSCOPE does not make the decision for the business owner. Work through the seven stages below: every value shown comes from the backend, and every blocker tells you what is missing and what to do next.",
         rule1: "Verified information",
         rule2: "Deterministic calculations",
         rule3: "Transparent scenarios",
         rule4: "Decisions remain with the owner",
-
-        waitingEvent: "Waiting for a verified economic event",
-        approvedSources:
-          "Verified economic information from approved sources will appear here.",
-        connect: "View information →",
-
-        notConnected: "Not connected",
-        verifiedRequired: "Verified inputs required",
-        calculatedEngine: "Calculated by engine",
-        scenarioDraft: "SCENARIO DRAFT",
-        testResponse: "Test a response",
-        ownerConfirmation: "Owner confirmation required",
-        changePrice: "Change selling price",
-        materialCost: "Imported material cost",
-        draftSaved: "Draft saved",
-        saveDraft: "Save draft",
-        uiOnly:
-          "These controls preview the experience; final calculations come from the deterministic scenario engine.",
-
-        option: "OPTION",
-        response: "RESPONSE",
-        result: "IMPACT",
-        awaitingCalculation: "Awaiting calculation",
-        ownerResponse: "OWNER RESPONSE",
-        noResponse: "No response recorded",
-        reviewThenChoose:
-          "Review verified comparisons, then choose and confirm the response you want to record.",
-        reviewOptions: "Review options →",
-
-        notStarted: "NOT_STARTED",
-        monitorTitle:
-          "Monitoring has not started. A confirmed response and actual results are required.",
-        actualProjected: "Actual vs projected",
-        awaitingData: "Awaiting data",
-        variance: "Variance",
-        reassessment: "Reassessment",
-        notRequired: "Not required",
-
-        closingEyebrow: "FLUXSCOPE",
         closingTitleA: "Understand.",
         closingTitleB: "Simulate.",
         closingTitleC: "Decide.",
-        closingBody:
-          "A decision-support system for Pakistani SMEs, designed around verified information, transparent calculations, and business-owner choice.",
+        closingBody: "A decision-support system for Pakistani SMEs, designed around verified information, transparent calculations, and business-owner choice.",
         back: "Back to top",
-        footer: "© 2026 FLUXSCOPE. Product prototype.",
+        footer: "© 2026 FLUXSCOPE. Demo.",
         footerTag: "Understand · Simulate · Decide",
+        workflowNote: "",
       };
+
+  const signalSummary = shock
+    ? `${humanize(shock.shock_type)} · ${shock.verification_status}`
+    : "No shock selected yet";
+  const impactSummary = impact
+    ? `Operating profit change ${formatSigned(impact.result.profit_impact)} PKR`
+    : mapping
+      ? "Mapped · not yet quantified"
+      : profile
+        ? "Business facts confirmed"
+        : "No business facts yet";
+  const responseSummary =
+    decision?.decision_status === "confirmed"
+      ? "Decision confirmed"
+      : decision
+        ? "Awaiting your confirmation"
+        : comparison
+          ? "Compared · no decision yet"
+          : completedRuns > 0
+            ? `${completedRuns} scenario(s) simulated`
+            : "No scenarios yet";
 
   return (
     <main className={isUrdu ? "appUr" : "appEn"}>
@@ -436,67 +320,53 @@ const [backendStatus, setBackendStatus] = useState<
         </a>
 
         <nav className="desktopNav">
-          <a className="activeNav" href="#top">
-            {copy.home}
-          </a>
+          <a className="activeNav" href="#top">{copy.home}</a>
           <a href="#how-it-works">{copy.how}</a>
           <a href="#features">{copy.features}</a>
           <a href="#about">{copy.about}</a>
         </nav>
 
         <div className="navActions">
+          <span className={`wfPill wfPill-${backendStatus === "connected" ? "done" : backendStatus === "checking" ? "ready" : "blocked"}`}>
+            {backendStatus === "checking"
+              ? "Checking backend…"
+              : backendStatus === "connected"
+                ? "Backend connected"
+                : "Backend unreachable"}
+          </span>
           <div className="langToggle" aria-label="Language selector">
-            <button
-              className={language === "ur" ? "selected" : ""}
-              onClick={() => setLanguage("ur")}
-            >
+            <button className={language === "ur" ? "selected" : ""} onClick={() => setLanguage("ur")}>
               اردو
             </button>
-            <button
-              className={language === "en" ? "selected" : ""}
-              onClick={() => setLanguage("en")}
-            >
+            <button className={language === "en" ? "selected" : ""} onClick={() => setLanguage("en")}>
               English
             </button>
           </div>
-
-          <a className="navCta" href="#stage-detect">
-            {copy.start}
-            <span>→</span>
-          </a>
         </div>
       </header>
 
       <section id="top" className="hero section">
         <div className="heroRule" aria-hidden="true" />
-
         <div className="heroGrid">
           <div className="heroCopy">
             <div className="eyebrow">
               <span />
               {copy.eyebrow}
             </div>
-
             <h1>
               {copy.titleA}
               <br />
               <em>{copy.titleB}</em>
             </h1>
-
             <p className="brandSlogan">{copy.slogan}</p>
             <p className="heroText">{copy.body}</p>
-
             <div className="heroButtons">
-              <a className="primaryButton" href="#stage-detect">
+              <a className="primaryButton" href={`#stage-${currentStage}`}>
                 {copy.start}
                 <span>→</span>
               </a>
-
-              <a className="secondaryButton" href="#how-it-works">
-                {copy.learn}
-              </a>
+              <a className="secondaryButton" href="#how-it-works">{copy.learn}</a>
             </div>
-
             <div className="trustLine">
               <span className="trustDot" />
               {copy.trust}
@@ -507,22 +377,19 @@ const [backendStatus, setBackendStatus] = useState<
             <div className="productShell">
               <aside className="productSidebar">
                 <ImpactMark compact />
-
                 <div className="sideNav">
-                  {stages.map((stage, index) => (
+                  {stages.map((stage) => (
                     <a
                       key={stage.key}
-                      className={
-                        index === activeIndex ? "sideActive" : ""
-                      }
+                      className={stage.key === currentStage ? "sideActive" : ""}
                       href={`#stage-${stage.key}`}
                     >
                       <span className="sideIcon">{stage.icon}</span>
                       {isUrdu ? stage.ur : stage.en}
+                      <i className={`wfDot wfDot-${statuses[stage.key].tone}`} aria-label={statuses[stage.key].label} />
                     </a>
                   ))}
                 </div>
-
                 <div className="sideNote">
                   {isUrdu ? (
                     <>
@@ -543,37 +410,31 @@ const [backendStatus, setBackendStatus] = useState<
               <div className="productMain">
                 <div className="productTop">
                   <div>
-                    <span className="miniLabel">
-                      {copy.intelligence}
-                    </span>
+                    <span className="miniLabel">{copy.intelligence}</span>
                     <h3>{copy.welcome}</h3>
                     <p>{copy.slogan}</p>
                   </div>
-
-                  <div className="avatar">◌</div>
                 </div>
 
                 <div className="signalRow">
-                  <div className="miniCard">
+                  <a className="miniCard" href="#stage-detect">
                     <span className="cardIcon">↗</span>
                     <small>{copy.signal}</small>
-                    <strong>{copy.waitingData}</strong>
-                    <span className="cardLink">{copy.details}</span>
-                  </div>
-
-                  <div className="miniCard">
+                    <strong dir="ltr">{signalSummary}</strong>
+                    <span className="cardLink">DETECT →</span>
+                  </a>
+                  <a className="miniCard" href="#stage-quantify">
                     <span className="cardIcon">▧</span>
                     <small>{copy.impact}</small>
-                    <strong>{copy.profile}</strong>
-                    <span className="cardLink">{copy.analysis}</span>
-                  </div>
-
-                  <div className="miniCard">
+                    <strong dir="ltr">{impactSummary}</strong>
+                    <span className="cardLink">TRACE · QUANTIFY →</span>
+                  </a>
+                  <a className="miniCard" href="#stage-respond">
                     <span className="cardIcon">◇</span>
                     <small>{copy.responses}</small>
-                    <strong>{copy.ready}</strong>
-                    <span className="cardLink">{copy.explore}</span>
-                  </div>
+                    <strong dir="ltr">{responseSummary}</strong>
+                    <span className="cardLink">SIMULATE · RESPOND →</span>
+                  </a>
                 </div>
 
                 <div className="glanceCard conceptualJourney">
@@ -582,51 +443,16 @@ const [backendStatus, setBackendStatus] = useState<
                       <small>{copy.journey}</small>
                       <h4>{copy.fromSignal}</h4>
                     </div>
-                    <span>{copy.stages}</span>
+                    <span>{copy.stagesLabel}</span>
                   </div>
-
                   <div className="conceptFlow">
-                    <div>
-                      <span>01</span>
-                      <strong>
-                        {isUrdu ? "معاشی اشارہ" : "Economic signal"}
-                      </strong>
-                      <small>{copy.changed}</small>
-                    </div>
-
-                    <i>→</i>
-
-                    <div>
-                      <span>02</span>
-                      <strong>
-                        {isUrdu
-                          ? "کاروباری انحصار"
-                          : "Business dependency"}
-                      </strong>
-                      <small>{copy.enters}</small>
-                    </div>
-
-                    <i>→</i>
-
-                    <div>
-                      <span>03</span>
-                      <strong>
-                        {isUrdu ? "مالی اثر" : "Financial impact"}
-                      </strong>
-                      <small>{copy.measured}</small>
-                    </div>
-
-                    <i>→</i>
-
-                    <div>
-                      <span>04</span>
-                      <strong>
-                        {isUrdu
-                          ? "ردِعمل کے اختیارات"
-                          : "Response options"}
-                      </strong>
-                      <small>{copy.couldDo}</small>
-                    </div>
+                    {(["detect", "trace", "quantify", "simulate"] as StageKey[]).map((key, index) => (
+                      <div key={key}>
+                        <span>0{index + 1}</span>
+                        <strong>{stages.find((stage) => stage.key === key)?.[isUrdu ? "ur" : "en"]}</strong>
+                        <small dir="ltr">{statuses[key].label}</small>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -641,20 +467,16 @@ const [backendStatus, setBackendStatus] = useState<
             <a
               key={stage.key}
               href={`#stage-${stage.key}`}
-              className={active === stage.key ? "railActive" : ""}
+              className={stage.key === currentStage ? "railActive" : ""}
             >
               <span className="railIcon">{stage.icon}</span>
-
               <span>
                 <b>{isUrdu ? stage.ur : stage.en}</b>
-                <small>
-                  {isUrdu ? stage.descUr : stage.descEn}
+                <small className={`wfRailStatus wfRailStatus-${statuses[stage.key].tone}`} dir="ltr">
+                  {statuses[stage.key].label}
                 </small>
               </span>
-
-              {index < stages.length - 1 ? (
-                <i className="railDivider" />
-              ) : null}
+              {index < stages.length - 1 ? <i className="railDivider" /> : null}
             </a>
           ))}
         </div>
@@ -666,293 +488,97 @@ const [backendStatus, setBackendStatus] = useState<
             <span />
             {copy.method}
           </div>
-
           <h2>
             {copy.introTitleA}
             <br />
             <em>{copy.introTitleB}</em>
           </h2>
         </div>
-
         <div className="introRight">
           <p>{copy.intro}</p>
-
+          {copy.workflowNote ? <p>{copy.workflowNote}</p> : null}
           <div className="ruleList">
             <span>01&nbsp; {copy.rule1}</span>
             <span>02&nbsp; {copy.rule2}</span>
             <span>03&nbsp; {copy.rule3}</span>
             <span>04&nbsp; {copy.rule4}</span>
           </div>
+          {backendStatus === "disconnected" ? (
+            <div className="wfNotice wfNotice-error" dir="ltr">
+              <strong>The backend is not reachable</strong>
+              <p>
+                No stage can run until the FLUXSCOPE API is available at <code>{API_BASE_URL}</code>.
+                Start the backend and reload this page.
+              </p>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {stages.map((stage, index) => (
-        <section
-          id={`stage-${stage.key}`}
-          key={stage.key}
-          className={`workflowSection section ${
-            index % 2 ? "reverse" : ""
-          }`}
-        >
-          <div className="workflowNumber">0{index + 1}</div>
-
-          <div className="workflowCopy">
-            <div className="stageTag">
-              <span className="tagIcon">{stage.icon}</span>
-              {isUrdu ? stage.ur : stage.en}
-            </div>
-
-            <h2>
-              {isUrdu ? stage.questionUr : stage.questionEn}
-            </h2>
-
-            <p>
-              {isUrdu ? stage.descUr : stage.descEn}{" "}
-              {isUrdu
-                ? "نیچے دکھائی گئی حالت حقیقی پروڈکٹ کی حالت ہے؛ لائیو معاشی معلومات اور مالی اقدار منسلک بیک اینڈ سے آئیں گی۔"
-                : "The screen below is a truthful product state — live intelligence and financial values will come from the connected backend rather than invented demo data."}
-            </p>
-          </div>
-
-          <div className="workflowPanel">
-            {stage.key === "detect" && (
-              <>
-                                <div className="panelHeader">
-                  <span>{copy.signal}</span>
-                  <b>
-                    {backendStatus === "checking"
-                      ? "Checking backend..."
-                      : backendStatus === "connected"
-                        ? "Backend connected"
-                        : "Backend disconnected"}
-                  </b>
-                </div>
-
-                <div className="emptyState"></div>
-
-                <div className="emptyState">
-                  <div className="emptyIcon">⌁</div>
-
-                  <h3>{copy.waitingEvent}</h3>
-
-                  <p>{copy.approvedSources}</p>
-
-                  <button className="outlineButton" onClick={handleDetect}>
-                    {copy.connect}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {stage.key === "trace" && (
-              <div className="traceMap">
-                {(isUrdu
-                  ? [
-                      "معاشی جھٹکا",
-                      "کاروباری انحصار",
-                      "عملی اثر",
-                      "مالی اثر",
-                    ]
-                  : [
-                      "Economic shock",
-                      "Business dependency",
-                      "Operational effect",
-                      "Financial effect",
-                    ]
-                ).map((label, i) => (
-                  <div key={label} className="traceNode">
-                    <span>0{i + 1}</span>
-                    <strong>{label}</strong>
-                    <small>
-                      {isUrdu
-                        ? "تصدیق شدہ نقشے کا انتظار"
-                        : "Awaiting verified mapping"}
-                    </small>
-
-                    {i < 3 ? <i>↓</i> : null}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {stage.key === "quantify" && (
-              <div className="metricEmpty">
-                {[
-                  [
-                    isUrdu ? "لاگت" : "INPUT COST",
-                    copy.verifiedRequired,
-                  ],
-                  [
-                    isUrdu
-                      ? "مجموعی منافع کا مارجن"
-                      : "GROSS MARGIN",
-                    copy.calculatedEngine,
-                  ],
-                  [
-                    isUrdu ? "نقدی کی ضرورت" : "CASH REQUIREMENT",
-                    copy.calculatedEngine,
-                  ],
-                  [
-                    isUrdu ? "منافع پر اثر" : "PROFIT IMPACT",
-                    copy.calculatedEngine,
-                  ],
-                ].map(([label, status]) => (
-                  <div key={label}>
-                    <small>{label}</small>
-                    <strong>—</strong>
-                    <span>{status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {stage.key === "simulate" && (
-              <div className="scenarioPanel">
-                <div className="scenarioTop">
-                  <div>
-                    <small>{copy.scenarioDraft}</small>
-                    <h3>{copy.testResponse}</h3>
-                  </div>
-                  <span>{copy.ownerConfirmation}</span>
-                </div>
-
-                <label>
-                  {copy.changePrice}{" "}
-                  <b>
-                    {priceChange >= 0 ? "+" : ""}
-                    {priceChange}%
-                  </b>
-
-                  <input
-                    type="range"
-                    min="-10"
-                    max="15"
-                    value={priceChange}
-                    onChange={(event) =>
-                      setPriceChange(Number(event.target.value))
-                    }
-                  />
-                </label>
-
-                <label>
-                  {copy.materialCost}{" "}
-                  <b>{materialChange}%</b>
-
-                  <input
-                    type="range"
-                    min="-30"
-                    max="10"
-                    value={materialChange}
-                    onChange={(event) =>
-                      setMaterialChange(Number(event.target.value))
-                    }
-                  />
-                </label>
-
-                <div className="scenarioFooter">
-                  <span>{scenarioSummary}</span>
-
-                  <button
-                    className="primarySmall"
-                    onClick={() => setConfirmed(true)}
-                  >
-                    {confirmed ? copy.draftSaved : copy.saveDraft}
-                  </button>
-                </div>
-
-                <p className="finePrint">{copy.uiOnly}</p>
-              </div>
-            )}
-
-            {stage.key === "compare" && (
-              <div className="compareTable">
-                <div className="compareHead">
-                  <span>{copy.option}</span>
-                  <span>{copy.response}</span>
-                  <span>{copy.result}</span>
-                </div>
-
-                {(isUrdu
-                  ? [
-                      "قیمت تبدیل کریں",
-                      "درآمدی مواد کم کریں",
-                      "لاگت برداشت کریں",
-                    ]
-                  : [
-                      "Adjust price",
-                      "Reduce imported input",
-                      "Absorb cost",
-                    ]
-                ).map((label) => (
-                  <div className="compareRow" key={label}>
-                    <strong>{label}</strong>
-                    <span>{copy.awaitingCalculation}</span>
-                    <span className="neutralPill">—</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {stage.key === "respond" && (
-              <div className="responseCard">
-                <div className="responseIcon">✓</div>
-
-                <div>
-                  <small>{copy.ownerResponse}</small>
-
-                  <h3>{copy.noResponse}</h3>
-
-                  <p>{copy.reviewThenChoose}</p>
-                </div>
-
-                <button className="outlineButton" onClick={handleDetect}>
-                  {copy.reviewOptions}
-                </button>
-              </div>
-            )}
-
-            {stage.key === "monitor" && (
-              <div className="monitorCard">
-                <div className="monitorStatus">
-                  <span className="statusDot" />
-                  {copy.notStarted}
-                </div>
-
-                <h3>{copy.monitorTitle}</h3>
-
-                <div className="monitorRows">
-                  <div>
-                    <span>{copy.actualProjected}</span>
-                    <b>{copy.awaitingData}</b>
-                  </div>
-
-                  <div>
-                    <span>{copy.variance}</span>
-                    <b>—</b>
-                  </div>
-
-                  <div>
-                    <span>{copy.reassessment}</span>
-                    <b>{copy.notRequired}</b>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      ))}
+      <DetectStage status={statuses.detect} shock={shock} onShockSelected={selectShock} />
+      <TraceStage
+        status={statuses.trace}
+        shock={shock}
+        businessId={businessId}
+        ensureBusinessId={ensureBusinessId}
+        profile={profile}
+        onProfileConfirmed={confirmProfile}
+        mapping={mapping}
+        onMapped={setMapping}
+        requestedFields={requestedFields}
+      />
+      <QuantifyStage
+        key={`quantify-${mapping?.id ?? "none"}`}
+        status={statuses.quantify}
+        shock={shock}
+        profile={profile}
+        mapping={mapping}
+        impact={impact}
+        onCalculated={setImpact}
+        onMissingFields={setRequestedFields}
+        onBlocked={setQuantifyBlocker}
+      />
+      <SimulateStage
+        key={`simulate-${impact?.id ?? "none"}`}
+        status={statuses.simulate}
+        profile={profile}
+        impact={impact}
+        runs={runs}
+        onRunsChange={setRuns}
+      />
+      <CompareStage
+        key={`compare-${impact?.id ?? "none"}`}
+        status={statuses.compare}
+        impact={impact}
+        runs={runs}
+        comparison={comparison}
+        onCompared={setComparison}
+      />
+      <RespondStage
+        key={`respond-${comparison?.id ?? "none"}`}
+        status={statuses.respond}
+        comparison={comparison}
+        runs={runs}
+        decision={decision}
+        onDecision={setDecision}
+      />
+      <MonitorStage
+        key={`monitor-${decision?.id ?? "none"}`}
+        status={statuses.monitor}
+        decision={decision}
+        entries={monitoring}
+        onEvaluated={(entry) => setMonitoring((current) => [...current, entry])}
+      />
 
       <section id="about" className="closing section">
         <div className="closingMark">
           <ImpactMark />
         </div>
-
         <div>
           <div className="eyebrow">
             <span />
-            {copy.closingEyebrow}
+            FLUXSCOPE
           </div>
-
           <h2>
             {copy.closingTitleA}
             <br />
@@ -960,9 +586,7 @@ const [backendStatus, setBackendStatus] = useState<
             <br />
             {copy.closingTitleC}
           </h2>
-
           <p>{copy.closingBody}</p>
-
           <a className="primaryButton" href="#top">
             {copy.back} <span>↑</span>
           </a>
@@ -977,6 +601,3 @@ const [backendStatus, setBackendStatus] = useState<
     </main>
   );
 }
-
-
-

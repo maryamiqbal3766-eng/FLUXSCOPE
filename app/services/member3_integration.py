@@ -19,6 +19,7 @@ from app.models.domain import (
 
 from app.services.impact_engine.calculator import (
     DeterministicImpactCalculator,
+    ImpactCalculationError,
     ImpactInputs,
 )
 from app.services.impact_engine.comparison import (
@@ -33,6 +34,7 @@ from app.services.impact_engine.scenarios import (
     DeterministicScenarioEngine,
     ScenarioChanges,
     ScenarioDefinition as EngineScenarioDefinition,
+    ScenarioValidationError,
 )
 
 
@@ -64,6 +66,9 @@ class Member3Integration:
     missing business information.
     """
 
+    # Confirmed business facts required by the deterministic calculator.
+    # The exchange-rate change itself is an external fact: it comes from the
+    # verified shock magnitude, not from the business profile.
     REQUIRED_CALCULATION_FIELDS = (
         "sales_quantity",
         "selling_price_per_unit",
@@ -72,7 +77,19 @@ class Member3Integration:
         "exchange_rate",
         "local_input_cost",
         "operating_expenses",
-        "exchange_rate_change",
+    )
+
+    # The current deterministic formula catalogue models only an
+    # exchange-rate shock applied to imported inputs.
+    SUPPORTED_QUANTIFY_SHOCK_TYPES = ("exchange_rate",)
+
+    # Scenario assumptions the deterministic scenario engine understands.
+    SUPPORTED_SCENARIO_FIELDS = (
+        "selling_price_per_unit",
+        "imported_quantity",
+        "operating_expenses",
+        "exchange_rate",
+        "exchange_rate_change_delta",
     )
 
     def __init__(self) -> None:
@@ -116,6 +133,20 @@ class Member3Integration:
     # QUANTIFY
     # ------------------------------------------------------------------
 
+    def require_supported_shock(self, shock) -> None:
+        """Block QUANTIFY for shocks the formula catalogue does not model."""
+
+        if shock.shock_type not in self.SUPPORTED_QUANTIFY_SHOCK_TYPES:
+            raise ContractError(
+                422,
+                "UNSUPPORTED_SHOCK_TYPE",
+                f"This '{shock.shock_type}' shock was detected successfully, but the current "
+                "deterministic QUANTIFY engine does not support financial calculation for this "
+                "shock type. Supported: " + ", ".join(self.SUPPORTED_QUANTIFY_SHOCK_TYPES) + ".",
+                stage="QUANTIFY",
+                required_fields=["shock_type"],
+            )
+
     def calculate_impact(
         self,
         request: ImpactResultRequest,
@@ -128,6 +159,8 @@ class Member3Integration:
 
         Missing fields are rejected rather than invented.
         """
+
+        self.require_supported_shock(shock)
 
         values = self._extract_calculation_fields(profile)
 
@@ -157,10 +190,22 @@ class Member3Integration:
                 required_fields=["unit"],
             )
 
+        # The sign of the change must be stated by the source; it is not
+        # guessed for directions such as "change".
+        direction = shock.direction_or_change.lower()
+        if direction not in ("increase", "decrease"):
+            raise ContractError(
+                422,
+                "CLARIFICATION_REQUIRED",
+                "The verified shock does not state whether the exchange rate increased or decreased.",
+                stage="QUANTIFY",
+                required_fields=["direction_or_change"],
+            )
+
         # Convert percentage points to decimal fraction.
         exchange_rate_change = shock_change / Decimal("100")
 
-        if shock.direction_or_change.lower() == "decrease":
+        if direction == "decrease":
             exchange_rate_change = -exchange_rate_change
 
         inputs = ImpactInputs(
@@ -174,7 +219,15 @@ class Member3Integration:
             exchange_rate_change=exchange_rate_change,
         )
 
-        result = self.calculator.calculate(inputs)
+        try:
+            result = self.calculator.calculate(inputs)
+        except ImpactCalculationError as exc:
+            raise ContractError(
+                422,
+                "INVALID_INPUT",
+                str(exc),
+                stage="QUANTIFY",
+            ) from exc
 
         return ImpactResultRecord(
             id=uuid4(),
@@ -202,10 +255,18 @@ class Member3Integration:
             changes=changes,
         )
 
-        result = self.scenario_engine.run(
-            baseline_inputs=baseline_inputs,
-            scenario=engine_scenario,
-        )
+        try:
+            result = self.scenario_engine.run(
+                baseline_inputs=baseline_inputs,
+                scenario=engine_scenario,
+            )
+        except (ImpactCalculationError, ScenarioValidationError) as exc:
+            raise ContractError(
+                422,
+                "INVALID_INPUT",
+                str(exc),
+                stage="SIMULATE",
+            ) from exc
 
         return ScenarioResultRecord(
             id=uuid4(),
@@ -417,6 +478,21 @@ class Member3Integration:
             item.field_reference: item.value
             for item in scenario.changed_assumptions
         }
+
+        # An assumption the engine cannot apply must not be dropped silently:
+        # the owner would see a result that ignores what they asked for.
+        unsupported = sorted(
+            set(values) - set(Member3Integration.SUPPORTED_SCENARIO_FIELDS)
+        )
+        if unsupported:
+            raise ContractError(
+                422,
+                "CLARIFICATION_REQUIRED",
+                "Unsupported scenario assumption(s): " + ", ".join(unsupported)
+                + ". Supported: " + ", ".join(Member3Integration.SUPPORTED_SCENARIO_FIELDS) + ".",
+                stage="SIMULATE",
+                required_fields=list(Member3Integration.SUPPORTED_SCENARIO_FIELDS),
+            )
 
         def optional_decimal(name: str) -> Decimal | None:
             value = values.get(name)

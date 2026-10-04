@@ -39,13 +39,26 @@ class LocalEconomicRetriever:
         self._sources[str(source.source_id)] = source
         self._chunks.extend(self.chunker.chunk(str(source.source_id), source.content))
 
-    def retrieve(self, query: str, *, top_k: int = 5) -> list[RetrievedChunk]:
+    def retrieve(
+        self,
+        query: str,
+        *,
+        top_k: int = 5,
+        source_id: str | None = None,
+    ) -> list[RetrievedChunk]:
+        """Return the best-matching chunks, optionally limited to one source.
+
+        Limiting retrieval to one source keeps evidence attributable: a chunk
+        is only ever reported under the document it actually came from.
+        """
         q = _terms(query)
         if not q:
             return []
 
         results: list[RetrievedChunk] = []
         for chunk in self._chunks:
+            if source_id is not None and chunk.source_id != source_id:
+                continue
             c = _terms(chunk.text)
             overlap = len(q & c)
             if overlap == 0:

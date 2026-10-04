@@ -6,6 +6,10 @@ from .schemas import ShockCandidate, SourceDocument
 from .verifier import EconomicEvidenceVerifier
 
 
+class UnapprovedSourceError(ValueError):
+    """Raised when a source is not on the approved-source registry."""
+
+
 class EconomicMonitor:
     """Bounded DETECT component.
 
@@ -36,10 +40,15 @@ class EconomicMonitor:
             publisher=source.publisher,
             url=source.source_url,
         ):
-            raise ValueError("Source is not approved for TADBIR DETECT.")
+            raise UnapprovedSourceError("Source is not approved for TADBIR DETECT.")
 
         self.retriever.add_source(source)
-        retrieved = self.retriever.retrieve(query, top_k=top_k)
+        # Only this document's chunks may be cited as this document's evidence.
+        retrieved = self.retriever.retrieve(
+            query,
+            top_k=top_k,
+            source_id=str(source.source_id),
+        )
         if not retrieved:
             return []
 

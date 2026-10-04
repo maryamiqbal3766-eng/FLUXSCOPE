@@ -1,4 +1,5 @@
-from uuid import UUID
+from decimal import Decimal
+from uuid import UUID, uuid4
 
 from app.core.errors import ContractError
 from app.models.domain import (
@@ -18,6 +19,7 @@ from app.models.domain import (
     IntakeStatus,
     MonitoringRecordCreate,
     ProjectionComparisonRequest,
+    ProvenanceRecord,
     ScenarioCreate,
     ScenarioDefinition,
     ScenarioUpdate,
@@ -25,8 +27,17 @@ from app.models.domain import (
     utc_now,
     ProcessingStatus,
 )
+from app.services.economic_intelligence.schemas import ShockCandidate, SourceDocument
 from app.services.store import InMemoryStore
 from app.services.member3_integration import Member3Integration
+
+
+# DETECT verifier outcome -> domain verification status.
+DETECT_VERIFICATION_STATUS = {
+    "VERIFIED": VerificationStatus.VERIFIED,
+    "REJECTED": VerificationStatus.REJECTED,
+    "PENDING_VERIFICATION": VerificationStatus.PENDING,
+}
 
 
 class WorkflowOrchestrator:
@@ -37,9 +48,97 @@ class WorkflowOrchestrator:
         self.member3 = Member3Integration()
 
     def register_shock(self, payload: EconomicShockCreate) -> EconomicShockEvent:
+        """Register a caller-supplied shock candidate.
+
+        Verification is established only by the DETECT evidence verifier
+        (approved-source registry + evidence checks). A caller therefore
+        cannot assert a ``verified`` status through this endpoint.
+        """
+
+        claims_verified = payload.verification_status == VerificationStatus.VERIFIED or any(
+            item.verification_status == VerificationStatus.VERIFIED for item in payload.provenance
+        )
+        if claims_verified:
+            raise ContractError(
+                422,
+                "VERIFICATION_REQUIRED",
+                "A verified status can only be assigned by the DETECT evidence verifier. "
+                "Submit the source through POST /detect, or register this shock as pending.",
+                stage="DETECT",
+                required_fields=["verification_status"],
+            )
         event = EconomicShockEvent(**payload.model_dump())
         self.store.shocks[event.id] = event
         return event
+
+    def register_detected_shock(
+        self,
+        candidate: ShockCandidate,
+        source: SourceDocument,
+    ) -> EconomicShockEvent:
+        """Hand a DETECT candidate to the workflow as an EconomicShockEvent.
+
+        The verification status comes from the server-side DETECT verifier
+        result, never from the client. The shock keeps the candidate's ID.
+        """
+
+        existing = self.store.shocks.get(candidate.shock_id)
+        if existing is not None:
+            return existing
+
+        if candidate.effective_date is not None:
+            observed_date = candidate.effective_date
+            date_note = "Date: effective date stated in the source evidence."
+        elif source.published_at is not None:
+            observed_date = source.published_at
+            date_note = (
+                "Date: the source does not state an effective date; "
+                "the source publication date supplied with the document is used."
+            )
+        else:
+            raise ContractError(
+                422,
+                "CLARIFICATION_REQUIRED",
+                "The source states no effective date and no publication date was supplied. "
+                "Re-run DETECT with the source's publication date.",
+                stage="DETECT",
+                required_fields=["published_at"],
+            )
+
+        verification_status = DETECT_VERIFICATION_STATUS[candidate.verification_status]
+        provenance = [
+            ProvenanceRecord(
+                source_name=evidence.publisher,
+                source_url_or_reference=evidence.source_url or source.source_url or evidence.title,
+                retrieved_at=source.retrieved_at,
+                published_at=source.published_at,
+                source_excerpt_or_locator=evidence.evidence_locator or evidence.quote,
+                verification_status=verification_status,
+            )
+            for evidence in candidate.source_evidence
+        ]
+        notes = [date_note, *candidate.verification_notes]
+
+        event = EconomicShockEvent(
+            id=candidate.shock_id,
+            shock_type=candidate.shock_type,
+            economic_variable=candidate.variable,
+            direction_or_change=candidate.direction_or_change,
+            observed_or_effective_date=observed_date,
+            provenance=provenance,
+            verification_status=verification_status,
+            magnitude=self._decimal_string(candidate.magnitude),
+            unit=candidate.unit or None,
+            source_notes=" ".join(notes),
+        )
+        self.store.shocks[event.id] = event
+        return event
+
+    @staticmethod
+    def _decimal_string(value: Decimal | None) -> str | None:
+        if value is None:
+            return None
+        return format(value, "f")
 
     def get_shock(self, shock_id: UUID) -> EconomicShockEvent:
         return self.store.required(self.store.shocks, shock_id, "Economic shock")  # type: ignore[return-value]
@@ -69,15 +168,30 @@ class WorkflowOrchestrator:
     def request_mapping(self, request: ImpactMappingRequest):
         shock = self.get_shock(request.shock_event_id)
 
+        # TRACE may use pending, verified, or unverifiable shocks; a shock the
+        # verifier rejected does not enter the business workflow.
+        if shock.verification_status == VerificationStatus.REJECTED:
+            raise ContractError(
+                422,
+                "VERIFICATION_REQUIRED",
+                "This economic shock was rejected by source verification and cannot be traced.",
+                stage="TRACE",
+                required_fields=["verification_status"],
+            )
+
         self._require_confirmed_business_profile(
             request.business_id,
             "TRACE",
         )
 
-        profile = next(
-            profile
-            for profile in self.store.profiles.values()
-            if profile.business_id == request.business_id
+        # The most recently confirmed profile reflects the owner's latest facts.
+        profile = max(
+            (
+                profile
+                for profile in self.store.profiles.values()
+                if profile.business_id == request.business_id
+            ),
+            key=lambda profile: profile.created_at,
         )
 
         mapping = self.member3.create_mapping(
@@ -86,7 +200,7 @@ class WorkflowOrchestrator:
             profile=profile,
         )
 
-        self.store.impact_mappings[mapping.shock_event_id] = mapping
+        self.store.impact_mappings[mapping.id] = mapping
 
         return mapping
 
@@ -98,6 +212,31 @@ class WorkflowOrchestrator:
                 code="VERIFICATION_REQUIRED",
                 message="QUANTIFY requires a verified economic shock.",
                 status_code=422,
+                stage="QUANTIFY",
+                required_fields=["verification_status"],
+            )
+
+        self.member3.require_supported_shock(shock)
+
+        # TRACE -> QUANTIFY gate: the referenced mapping must exist and must
+        # have been produced for this shock.
+        mapping = self.store.impact_mappings.get(request.impact_mapping_id)
+        if mapping is None:
+            raise ContractError(
+                422,
+                "CLARIFICATION_REQUIRED",
+                "QUANTIFY requires a completed TRACE impact mapping. "
+                "Create one with POST /impact-mappings first.",
+                stage="QUANTIFY",
+                required_fields=["impact_mapping_id"],
+            )
+        if mapping.shock_event_id != request.shock_event_id:
+            raise ContractError(
+                409,
+                "STATE_CONFLICT",
+                "The impact mapping was created for a different economic shock.",
+                stage="QUANTIFY",
+                required_fields=["impact_mapping_id"],
             )
 
         if not request.business_input_ids:
@@ -128,6 +267,15 @@ class WorkflowOrchestrator:
             )
 
         profile = profiles[0]
+
+        if mapping.business_id != profile.business_id:
+            raise ContractError(
+                409,
+                "STATE_CONFLICT",
+                "The impact mapping belongs to a different business than the confirmed inputs.",
+                stage="QUANTIFY",
+                required_fields=["impact_mapping_id", "business_input_ids"],
+            )
 
         result_record = self.member3.calculate_impact(
             request=request,
@@ -270,12 +418,19 @@ class WorkflowOrchestrator:
 
         comparisons = self.member3.compare_scenarios(scenario_results)
 
-        return {
+        comparison = {
+            "id": uuid4(),
             "business_id": request.business_id,
             "base_impact_result_id": request.base_impact_result_id,
             "scenario_result_ids": request.scenario_result_ids,
             "comparisons": comparisons,
+            "created_at": utc_now(),
         }
+        self.store.comparisons[comparison["id"]] = comparison
+        return comparison
+
+    def get_comparison(self, comparison_id: UUID):
+        return self.store.required(self.store.comparisons, comparison_id, "Comparison")
 
     def record_monitoring_input(self, request: MonitoringRecordCreate):
         decision = self._require_confirmed_decision(request.human_decision_id)

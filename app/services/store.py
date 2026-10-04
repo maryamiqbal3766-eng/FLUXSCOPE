@@ -21,6 +21,7 @@ class InMemoryStore:
         self.impact_results = {}
         self.scenarios: dict[UUID, ScenarioDefinition] = {}
         self.scenario_results = {}
+        self.comparisons: dict[UUID, dict] = {}
         self.decisions: dict[UUID, HumanDecision] = {}
 
 

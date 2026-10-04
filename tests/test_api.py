@@ -3,6 +3,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.main import app, store
+from workflow_helpers import make_mapping, make_verified_shock
 
 client = TestClient(app)
 
@@ -40,6 +41,9 @@ def shock_payload(status: str = "pending") -> dict[str, object]:
 
 
 def make_shock(status: str = "pending") -> dict[str, object]:
+    if status == "verified":
+        # A verified status is assigned only by the DETECT evidence verifier.
+        return make_verified_shock()
     response = client.post("/api/v1/shocks", json=shock_payload(status))
     assert response.status_code == 201
     return response.json()
@@ -132,7 +136,7 @@ def test_trace_accepts_pending_shock_but_quantify_blocks_it() -> None:
         "/api/v1/impact-results",
         json={
             "shock_event_id": shock["id"],
-            "impact_mapping_id": str(uuid4()),
+            "impact_mapping_id": trace.json()["id"],
             "business_input_ids": [profile_id],
         },
     )
@@ -144,13 +148,15 @@ def test_trace_accepts_pending_shock_but_quantify_blocks_it() -> None:
 
 def test_verified_quantify_routes_to_member_three_interface() -> None:
     shock = make_shock("verified")
-    profile_id = confirmed_profile_id(uuid4())
+    business_id = uuid4()
+    profile_id = confirmed_profile_id(business_id)
+    mapping_id = make_mapping(shock["id"], business_id)
 
     response = client.post(
         "/api/v1/impact-results",
         json={
             "shock_event_id": shock["id"],
-            "impact_mapping_id": str(uuid4()),
+            "impact_mapping_id": mapping_id,
             "business_input_ids": [profile_id],
             "assumption_ids": [],
         },
@@ -193,12 +199,15 @@ def test_simulate_executes_confirmed_scenario_from_quantify_result() -> None:
     # Create a verified economic shock.
     shock = make_shock(status="verified")
 
+    # TRACE maps the shock to the confirmed business.
+    mapping_id = make_mapping(shock["id"], business_id)
+
     # QUANTIFY creates the baseline impact result.
     impact_response = client.post(
         "/api/v1/impact-results",
         json={
             "shock_event_id": shock["id"],
-            "impact_mapping_id": str(uuid4()),
+            "impact_mapping_id": mapping_id,
             "business_input_ids": [profile_id],
             "assumption_ids": [],
         },
@@ -324,12 +333,15 @@ def test_monitoring_evaluates_confirmed_selected_scenario() -> None:
     # Create a verified economic shock.
     shock = make_shock(status="verified")
 
+    # TRACE maps the shock to the confirmed business.
+    mapping_id = make_mapping(shock["id"], business_id)
+
     # QUANTIFY creates the baseline impact result.
     impact_response = client.post(
         "/api/v1/impact-results",
         json={
             "shock_event_id": shock["id"],
-            "impact_mapping_id": str(uuid4()),
+            "impact_mapping_id": mapping_id,
             "business_input_ids": [profile_id],
             "assumption_ids": [],
         },

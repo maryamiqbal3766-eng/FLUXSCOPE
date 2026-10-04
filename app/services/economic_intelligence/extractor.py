@@ -149,6 +149,11 @@ class EconomicShockExtractor:
                 raise ValueError("magnitude must be numeric when supplied") from exc
 
         reported_value = item.get("reported_value")
+        if reported_value is None and magnitude is not None:
+            # The verifier must be able to find the extracted magnitude in
+            # the quoted evidence; otherwise an LLM-supplied number could be
+            # marked verified without appearing in the source.
+            reported_value = format(magnitude.normalize(), "f")
         evidence = SourceEvidence(
             source_id=source_id,
             title=title,
