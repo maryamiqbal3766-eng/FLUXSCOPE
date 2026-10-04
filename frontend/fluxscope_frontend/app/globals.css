@@ -1,0 +1,854 @@
+:root{--cream:#F7F5EF;--paper:#FFFFFF;--white:#fff;--ink:#263334;--muted:#667475;--burgundy:#123F40;--burgundy-dark:#0B2F30;--forest:#0B2F30;--sage:#8EAEA0;--sage-light:#E8F0EA;--brass:#B59A62;--line:#ddd7cb}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--cream);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}a{color:inherit;text-decoration:none}button,input{font:inherit}.topbar{height:88px;padding:0 5.5vw;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;background:rgba(247,243,234,.92);border-bottom:1px solid rgba(38,51,52,.08);backdrop-filter:blur(18px)}.brand{display:inline-flex;align-items:center;gap:10px;color:var(--forest)}.brandMark{width:56px;height:56px;color:var(--forest)}.brandWord{display:flex;flex-direction:column;line-height:.95}.brandWord span{font-family:Georgia,"Times New Roman",serif;font-size:28px;letter-spacing:.07em}.brandWord small{font-family:"Noto Nastaliq Urdu",serif;font-size:15px;text-align:center;margin-top:4px;color:var(--burgundy)}.brandCompact .brandMark{width:38px;height:38px}.brandCompact .brandWord span{font-size:18px}.brandCompact .brandWord small{font-size:11px}.desktopNav{display:flex;gap:34px;align-items:center;margin-left:auto;margin-right:42px}.desktopNav a{font-size:14px;color:#404a49;padding:33px 0 28px;border-bottom:2px solid transparent}.desktopNav .activeNav{color:var(--burgundy);border-bottom-color:var(--burgundy)}.navActions{display:flex;gap:18px;align-items:center}.langToggle{display:flex;background:#efe7dc;border-radius:30px;padding:4px}.langToggle button{border:0;background:transparent;border-radius:24px;padding:9px 14px;color:#596160;cursor:pointer}.langToggle .selected{background:var(--paper);color:var(--burgundy);box-shadow:0 3px 12px rgba(0,0,0,.06)}.navCta,.primaryButton{display:inline-flex;align-items:center;gap:22px;background:var(--burgundy);color:#fff;border-radius:28px;padding:13px 23px;transition:.25s ease}.navCta:hover,.primaryButton:hover{background:var(--burgundy-dark);transform:translateY(-1px)}.navCta span,.primaryButton span{font-size:20px}.section{padding-left:7vw;padding-right:7vw}.hero{min-height:700px;padding-top:86px;padding-bottom:80px;position:relative;overflow:hidden}.heroGrid{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:.95fr 1.05fr;gap:55px;align-items:center;position:relative;z-index:2}.heroCopy{padding-top:20px}.eyebrow,.stageTag{color:#9b6255;letter-spacing:.19em;font-size:11px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:13px}.eyebrow span{width:42px;height:1px;background:#a56b5f;display:inline-block}.hero h1,.introBand h2,.workflowCopy h2,.closing h2{font-family:Georgia,"Times New Roman",serif;font-weight:400;letter-spacing:-.035em;color:#222b2b}.hero h1{font-size:clamp(54px,5.1vw,86px);line-height:.99;margin:36px 0 26px}.hero h1 em,h2 em{color:var(--burgundy);font-style:italic}.brandSlogan{max-width:620px;color:var(--burgundy);font-family:Georgia,"Times New Roman",serif;font-size:21px;line-height:1.35;margin:-8px 0 18px}.heroText{max-width:620px;color:#596463;font-size:17px;line-height:1.8}.heroButtons{display:flex;gap:16px;align-items:center;margin-top:32px}.secondaryButton{padding:13px 25px;border-radius:28px;background:#eee4d7;color:#323c3b}.trustLine{margin-top:26px;font-size:11px;color:#7a827f;display:flex;gap:9px;align-items:center}.trustDot{width:7px;height:7px;background:var(--sage);border-radius:50%}.heroProduct{position:relative}.productShell{background:rgba(255,253,248,.88);border:1px solid rgba(130,115,95,.17);border-radius:20px;box-shadow:0 24px 70px rgba(42,37,30,.12);display:grid;grid-template-columns:190px minmax(0,1fr);overflow:hidden;transform:none;backdrop-filter:blur(10px)}.productSidebar{background:#f5eee4;padding:22px 14px;border-right:1px solid var(--line);min-width:0;overflow:hidden}.productSidebar .brand{width:100%;min-width:0;overflow:hidden}.productSidebar .brandMark{flex:none}.productSidebar .brandWord{min-width:0}.productSidebar .brandWord span{font-size:17px;white-space:nowrap;letter-spacing:.045em}.sideNav{margin-top:26px;display:grid;gap:5px}.sideNav a{display:flex;align-items:center;gap:9px;padding:10px 8px;border-radius:8px;font-size:11px;color:#3e4847}.sideNav .sideActive{color:#fff;background:var(--burgundy)}.sideIcon{width:20px;text-align:center;font-size:15px}.sideNote{margin-top:38px;border-top:1px solid #d9d0c2;padding:15px 6px;font-size:9px;color:#7a827f;line-height:1.5}.sideNote strong{color:var(--forest)}.productMain{padding:28px;background:rgba(255,255,255,.7)}.productTop{display:flex;justify-content:space-between}.miniLabel,.glanceHead small,.miniCard small,.metricEmpty small,.scenarioTop small,.panelHeader span,.responseCard small{font-size:8px;letter-spacing:.12em;color:#7d8784}.productTop h3{margin:5px 0 2px;font-family:Georgia,serif;font-size:23px;font-weight:400}.productTop p{margin:0;color:#8a918f;font-size:10px}.avatar{width:30px;height:30px;border:1px solid #d8d2c8;border-radius:50%;display:grid;place-items:center}.signalRow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:25px}.miniCard{padding:14px;border:1px solid #e8e1d8;border-radius:12px;background:#fffdf9;min-height:126px}.cardIcon{color:var(--burgundy);font-size:18px;display:block}.miniCard small{display:block;margin-top:8px}.miniCard strong{display:block;font-family:Georgia,serif;font-size:13px;font-weight:400;margin:7px 0 15px}.cardLink{font-size:8px;color:var(--burgundy)}.glanceCard{margin-top:12px;padding:17px;border:1px solid #e8e1d8;border-radius:12px;background:#fffdf9}.glanceHead{display:flex;justify-content:space-between}.glanceHead h4{margin:5px 0 0;font-family:Georgia,serif;font-weight:400;font-size:15px}.chartArea{display:grid;grid-template-columns:1fr 125px;gap:18px;margin-top:12px;align-items:end}.chartBars{height:100px;display:flex;align-items:end;gap:7px;padding-left:5px}.chartBars i{display:block;width:10px;background:#d5d9ce;border-radius:2px 2px 0 0}.chartBars i:nth-child(odd){background:#e4e8dd}.lineChart{position:absolute;width:38%;height:85px;pointer-events:none;color:var(--forest)}.lineChart svg{width:100%;height:100%}.indicatorList{display:grid;gap:9px;font-size:8px}.indicatorList div{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:center}.indicatorList b{display:block;height:4px;background:#e9e6df;border-radius:5px}.indicatorList i{display:block;height:100%;background:#8d9d88;border-radius:5px}.floatingPill{position:absolute;right:-18px;bottom:-22px;background:var(--forest);color:#fff;padding:12px 18px;border-radius:30px;font-size:10px;box-shadow:0 12px 30px rgba(25,62,53,.18)}.floatingPill span{margin-left:10px;color:#d4dfd1}.heroDecor{position:absolute;border-radius:50%;opacity:.65}.decorOne{width:420px;height:420px;background:#e7ddca;right:-100px;top:100px}.decorTwo{width:290px;height:290px;background:#a4b199;right:4%;top:170px}.stageRail{background:#fbf8f1;border-top:1px solid var(--line);border-bottom:1px solid var(--line);position:sticky;top:88px;z-index:40}.railInner{max-width:1500px;margin:auto;display:grid;grid-template-columns:repeat(7,1fr)}.railInner>a{min-height:92px;display:flex;align-items:center;gap:11px;padding:13px 18px;position:relative}.railIcon{width:37px;height:37px;display:grid;place-items:center;border-radius:11px;background:#efe7db;color:var(--burgundy);font-size:18px;flex:none}.railInner b{display:block;font-size:11px;letter-spacing:.08em}.railInner small{display:block;color:#7b8381;font-size:9px;margin-top:4px;line-height:1.3}.railActive .railIcon{background:var(--burgundy);color:#fff}.railActive b{color:var(--burgundy)}.railDivider{width:1px;height:35px;background:var(--line);margin-left:auto}.introBand{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:90px;padding-top:130px;padding-bottom:130px}.introBand h2{font-size:clamp(44px,4.3vw,68px);line-height:1.02;margin:26px 0 0}.introRight>p{max-width:590px;color:#5f6967;font-size:17px;line-height:1.8;margin:20px 0 34px}.ruleList{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:11px;color:#6f7876}.ruleList span{border-top:1px solid var(--line);padding-top:11px}.workflowSection{max-width:1400px;margin:0 auto;padding-top:115px;padding-bottom:115px;display:grid;grid-template-columns:75px .8fr 1.2fr;gap:45px;align-items:center}.workflowSection.reverse{background:rgba(255,255,255,.24)}.workflowNumber{font-family:Georgia,serif;font-size:18px;color:var(--brass);align-self:start;padding-top:6px}.stageTag{color:var(--burgundy);letter-spacing:.12em}.tagIcon{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:#eee3d6;font-size:14px;letter-spacing:0}.workflowCopy h2{font-size:clamp(40px,4vw,62px);line-height:1.03;margin:25px 0 20px}.workflowCopy p{color:#687270;font-size:15px;line-height:1.8;max-width:470px}.urduLine{margin-top:25px;color:var(--burgundy);font-family:"Noto Nastaliq Urdu",Georgia,serif;font-size:19px;direction:rtl}.workflowPanel{min-height:330px;background:rgba(255,253,248,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 15px 45px rgba(44,38,29,.07);padding:24px}.panelHeader,.scenarioTop{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:15px}.panelHeader b{font-size:9px;color:#8c6e62;background:#f0e7dc;padding:6px 8px;border-radius:12px;font-weight:500}.emptyState{min-height:260px;display:grid;place-items:center;text-align:center;align-content:center;gap:7px}.emptyIcon{width:50px;height:50px;border-radius:50%;background:#e8eee5;color:var(--forest);display:grid;place-items:center;font-size:25px}.emptyState h3{font-family:Georgia,serif;font-weight:400;margin:10px 0 0;font-size:22px}.emptyState p{max-width:410px;font-size:11px;line-height:1.7;color:#77817f}.outlineButton{background:transparent;border:1px solid #cfc7ba;color:var(--burgundy);border-radius:22px;padding:9px 15px;font-size:10px;cursor:pointer}.traceMap{min-height:280px;display:flex;flex-direction:column;justify-content:center;gap:6px}.traceNode{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;position:relative;padding:13px 15px;background:#fbf8f1;border:1px solid #e6e0d6;border-radius:11px}.traceNode>span{font-size:9px;color:var(--brass)}.traceNode strong{font-family:Georgia,serif;font-size:14px;font-weight:400}.traceNode small{font-size:9px;color:#8b9391}.traceNode i{position:absolute;left:17px;bottom:-12px;z-index:2;color:var(--burgundy);font-style:normal}.metricEmpty{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.metricEmpty>div{background:#fbf8f1;border:1px solid #e6e0d6;border-radius:12px;padding:17px}.metricEmpty strong{display:block;font-family:Georgia,serif;font-size:28px;font-weight:400;margin:13px 0 5px}.metricEmpty span{color:#89918f;font-size:9px}.scenarioPanel{padding-top:6px}.scenarioTop h3{margin:6px 0 0;font-family:Georgia,serif;font-size:22px;font-weight:400}.scenarioTop>span{font-size:9px;color:#8c6e62;background:#f0e7dc;padding:7px 10px;border-radius:14px}.scenarioPanel label{display:block;margin-top:22px;font-size:11px;color:#65706e}.scenarioPanel label b{float:right;color:var(--burgundy);font-weight:600}.scenarioPanel input{width:100%;accent-color:var(--burgundy);margin-top:11px}.scenarioFooter{display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:17px;border-top:1px solid var(--line)}.scenarioFooter span{font-size:9px;color:#7a8481}.primarySmall{border:0;background:var(--forest);color:#fff;border-radius:20px;padding:9px 14px;font-size:10px;cursor:pointer}.finePrint{color:#9a9e9c;font-size:8px;margin-top:12px}.compareTable{margin-top:18px;border:1px solid #e6e0d6;border-radius:12px;overflow:hidden}.compareHead,.compareRow{display:grid;grid-template-columns:1.1fr 1.5fr .7fr;gap:10px;padding:14px}.compareHead{background:#f4eee4;font-size:8px;letter-spacing:.1em;color:#7b8582}.compareRow{border-top:1px solid #e6e0d6;font-size:10px;align-items:center}.compareRow strong{font-family:Georgia,serif;font-weight:400;font-size:13px}.compareRow span{color:#7d8684}.neutralPill{border-radius:15px;padding:5px 8px;background:#eef0ea;text-align:center;color:#7e8884!important}.responseCard{display:grid;grid-template-columns:55px 1fr auto;gap:18px;align-items:center;min-height:270px}.responseIcon{width:55px;height:55px;border-radius:50%;background:#e5ece1;color:var(--forest);display:grid;place-items:center;font-size:24px}.responseCard h3{font-family:Georgia,serif;font-weight:400;font-size:24px;margin:8px 0}.responseCard p{font-size:10px;color:#7a8380;line-height:1.7;max-width:390px}.monitorCard{padding-top:8px}.monitorStatus{display:inline-flex;gap:8px;align-items:center;background:#e7eee4;color:var(--forest);padding:7px 10px;border-radius:15px;font-size:9px;letter-spacing:.08em}.statusDot{width:6px;height:6px;background:#799171;border-radius:50%}.monitorCard h3{font-family:Georgia,serif;font-size:26px;font-weight:400;max-width:500px;line-height:1.2;margin:18px 0 25px}.monitorRows{border-top:1px solid var(--line)}.monitorRows div{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font-size:10px;color:#747e7b}.monitorRows b{color:#596461;font-weight:500}.closing{max-width:1400px;margin:0 auto;padding-top:145px;padding-bottom:145px;display:grid;grid-template-columns:.8fr 1.2fr;gap:80px;align-items:center}.closingMark{min-height:360px;border-radius:24px;background:radial-gradient(circle at 50% 40%,#dce4d8 0,#eef0e7 42%,#f3e9dc 43%,#f3e9dc 62%,transparent 63%);display:grid;place-items:center}.closingMark .brand{transform:scale(1.8)}.closing h2{font-size:clamp(55px,6vw,92px);line-height:.95;margin:24px 0}.closing p{max-width:510px;color:#687270;font-size:16px;line-height:1.8;margin-bottom:28px}footer{padding:25px 7vw;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;color:#7a8380;font-size:10px;background:#f2ede3}@media(max-width:1100px){.desktopNav{gap:18px;margin-right:20px}.heroGrid{grid-template-columns:1fr}.heroProduct{max-width:760px;width:100%;margin:0 auto}.railInner{overflow-x:auto;grid-template-columns:repeat(7,minmax(150px,1fr))}.workflowSection{grid-template-columns:45px 1fr}.workflowPanel{grid-column:2}.introBand,.closing{gap:40px}}@media(max-width:760px){.topbar{height:72px;padding:0 20px}.brandMark{width:43px;height:43px}.brandWord span{font-size:21px}.desktopNav{display:none}.navActions{gap:7px}.navCta{padding:10px 13px;font-size:11px}.navCta span{display:none}.langToggle button{padding:7px 9px;font-size:10px}.hero{padding-top:55px}.hero h1{font-size:52px}.heroText{font-size:15px}.heroButtons{flex-wrap:wrap}.productShell{grid-template-columns:1fr;transform:none}.productSidebar{display:none}.productMain{padding:18px}.signalRow{grid-template-columns:1fr}.chartArea{grid-template-columns:1fr}.lineChart{width:70%}.floatingPill{display:none}.stageRail{top:72px}.railInner{grid-template-columns:repeat(7,150px)}.introBand,.closing{grid-template-columns:1fr;padding-top:90px;padding-bottom:90px}.workflowSection{grid-template-columns:1fr;padding-top:85px;padding-bottom:85px}.workflowNumber{display:none}.workflowPanel{grid-column:1}.workflowCopy h2{font-size:42px}.metricEmpty{grid-template-columns:1fr}.responseCard{grid-template-columns:1fr;text-align:center}.responseIcon{margin:0 auto}footer{flex-direction:column;gap:12px;text-align:center}}
+
+
+/* FLUXSCOPE conceptual journey */
+.conceptualJourney{transform:none!important}
+.conceptFlow{
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;
+  align-items:center;
+  gap:1rem;
+  padding:1.25rem 1.5rem 1.5rem;
+}
+.conceptFlow > div{
+  min-width:0;
+  padding:1rem;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(255,255,255,.58);
+}
+.conceptFlow span{
+  display:block;
+  color:var(--brass);
+  font-size:.68rem;
+  font-weight:700;
+  letter-spacing:.12em;
+  margin-bottom:.45rem;
+}
+.conceptFlow strong{
+  display:block;
+  color:var(--forest);
+  font-size:.9rem;
+  line-height:1.3;
+}
+.conceptFlow small{
+  display:block;
+  margin-top:.35rem;
+  color:var(--muted);
+  line-height:1.4;
+}
+.conceptFlow > i{
+  color:var(--brass);
+  font-style:normal;
+  font-size:1.1rem;
+}
+@media (max-width:900px){
+  .conceptFlow{grid-template-columns:1fr 1fr;gap:.7rem}
+  .conceptFlow > i{display:none}
+}
+@media (max-width:560px){
+  .conceptFlow{grid-template-columns:1fr}
+}
+
+
+/* FLUXSCOPE language modes */
+.appUr {
+  direction: rtl;
+  font-family: "Noto Nastaliq Urdu", "Noto Naskh Arabic", Tahoma, sans-serif;
+}
+.appUr .brandWord span,
+.appUr .langToggle button,
+.appUr .navCta,
+.appUr .desktopNav a,
+.appUr .hero h1,
+.appUr .introBand h2,
+.appUr .workflowCopy h2,
+.appUr .closing h2,
+.appUr .productTop h3,
+.appUr .glanceHead h4,
+.appUr .workflowPanel,
+.appUr .floatingPill,
+.appUr footer {
+  font-family: "Noto Nastaliq Urdu", "Noto Naskh Arabic", Tahoma, sans-serif;
+}
+.appUr .brandWord span {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  direction: ltr;
+}
+.appUr .heroText,
+.appUr .trustLine,
+.appUr .introRight > p,
+.appUr .workflowCopy p,
+.appUr .emptyState p,
+.appUr .monitorCard h3,
+.appUr .responseCard p {
+  line-height: 2;
+}
+.appUr .desktopNav,
+.appUr .navActions,
+.appUr .heroButtons,
+.appUr .signalRow,
+.appUr .productTop,
+.appUr .glanceHead,
+.appUr .scenarioTop,
+.appUr .scenarioFooter,
+.appUr .panelHeader,
+.appUr .responseCard,
+.appUr .monitorRows div {
+  direction: rtl;
+}
+.appUr .conceptFlow {
+  direction: rtl;
+}
+.appUr .conceptFlow > i {
+  transform: scaleX(-1);
+}
+.appUr .railInner,
+.appUr .sideNav {
+  direction: rtl;
+}
+.appUr .traceNode {
+  direction: rtl;
+}
+.appUr .traceNode i {
+  left: auto;
+  right: 17px;
+}
+.appUr .scenarioPanel label b {
+  float: left;
+}
+.appUr .workflowPanel,
+.appUr .metricEmpty,
+.appUr .compareTable {
+  text-align: right;
+}
+.appUr .compareHead,
+.appUr .compareRow {
+  direction: rtl;
+}
+.appUr .responseCard {
+  text-align: right;
+}
+@media(max-width:760px){
+  .appUr .responseCard { text-align: center; }
+}
+
+.appUr .brandSlogan { font-family: "Noto Nastaliq Urdu", "Noto Naskh Arabic", Tahoma, sans-serif; line-height: 2; }
+
+/* FLUXSCOPE visual system: restrained editorial business interface */
+:root {
+  --cream: #f7f5ef;
+  --paper: #fffefa;
+  --ink: #263334;
+  --muted: #687270;
+  --forest: #123f40;
+  --forest-dark: #0b2f30;
+  --sage: #8eaea0;
+  --sage-light: #e8f0ea;
+  --brass: #b59a62;
+  --line: #ded8cc;
+  --editorial: "Bodoni 72", "Didot", "Bodoni MT", "Times New Roman", Georgia, serif;
+}
+
+body { background: var(--cream); }
+.hero { overflow: visible; }
+.heroRule { position:absolute; left:7vw; right:7vw; top:34px; height:1px; background:rgba(38,51,52,.10); }
+.heroDecor { display:none !important; }
+
+/* Keep the product preview straight and calm. */
+.productShell { transform:none !important; backdrop-filter:none; box-shadow:0 18px 50px rgba(42,37,30,.08); }
+.productMain { background:rgba(255,255,255,.78); }
+.floatingPill { display:none !important; }
+
+/* Editorial English typography. */
+.hero h1, .introBand h2, .workflowCopy h2, .closing h2,
+.brandWord span, .productTop h3, .glanceHead h4, .scenarioTop h3,
+.emptyState h3, .responseCard h3, .monitorCard h3, .conceptFlow strong,
+.compareRow strong, .metricEmpty strong { font-family:var(--editorial); }
+
+.brandWord span { letter-spacing:.045em; }
+.brandSlogan { font-family:var(--editorial); font-style:normal; }
+
+/* The hero journey is a compact information map, not a decorative card pile. */
+.conceptualJourney { padding:18px; }
+.conceptFlow {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  padding:18px 0 0;
+  align-items:stretch;
+}
+.conceptFlow > div {
+  min-width:0;
+  min-height:126px;
+  padding:14px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fffdf9;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+.conceptFlow > i {
+  display:none;
+}
+.conceptFlow span {
+  margin-bottom:10px;
+  font-size:9px;
+  letter-spacing:.14em;
+  color:var(--brass);
+}
+.conceptFlow strong {
+  font-size:14px;
+  line-height:1.15;
+  color:var(--forest);
+}
+.conceptFlow small {
+  margin-top:auto;
+  padding-top:10px;
+  font-size:9px;
+  line-height:1.45;
+  color:var(--muted);
+}
+
+/* Seven-stage journey: readable on every language and screen size. */
+.stageRail { box-shadow:none; }
+.railInner { max-width:1500px; }
+.railInner>a { min-height:88px; padding:14px 14px; }
+.railIcon { width:30px; height:30px; border-radius:7px; background:transparent; font-size:14px; }
+.railInner b { font-size:10px; }
+.railInner small { font-size:8px; }
+.railDivider { height:26px; }
+
+/* Workflow sections are the actual scroll journey. */
+.workflowSection { scroll-margin-top:145px; }
+.workflowSection.reverse { background:transparent; }
+.workflowPanel { box-shadow:0 10px 32px rgba(44,38,29,.055); }
+.workflowCopy h2 { max-width:560px; }
+.workflowCopy p { max-width:500px; }
+
+/* Natural-height cards: never clip or force copy outside a border. */
+.miniCard, .metricEmpty>div, .traceNode, .conceptFlow>div { overflow:visible; }
+.miniCard { min-height:142px; display:flex; flex-direction:column; }
+.miniCard strong { line-height:1.35; margin:8px 0 10px; }
+.cardLink { margin-top:auto; }
+.traceNode { min-height:66px; }
+.metricEmpty>div { min-height:145px; display:flex; flex-direction:column; }
+.metricEmpty strong { margin:12px 0 4px; }
+
+/* Remove generic AI-looking ornaments. */
+.emptyIcon, .responseIcon { border-radius:10px; background:#edf0e9; }
+.closingMark { background:#edf0e9; border:1px solid var(--line); }
+
+/* Urdu: proper RTL flow, Nastaliq metrics, and content-driven sizing. */
+.appUr { font-family:"Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif; }
+.appUr .hero h1, .appUr .introBand h2, .appUr .workflowCopy h2, .appUr .closing h2,
+.appUr .productTop h3, .appUr .glanceHead h4, .appUr .scenarioTop h3,
+.appUr .emptyState h3, .appUr .responseCard h3, .appUr .monitorCard h3,
+.appUr .conceptFlow strong, .appUr .compareRow strong, .appUr .metricEmpty strong,
+.appUr .brandSlogan { font-family:"Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif; }
+.appUr .brandWord span { font-family:Inter,ui-sans-serif,system-ui,sans-serif; direction:ltr; }
+.appUr .conceptFlow { direction:rtl; }
+.appUr .conceptFlow>div { text-align:right; }
+.appUr .conceptFlow span { direction:ltr; text-align:right; }
+.appUr .railInner>a { text-align:right; }
+.appUr .workflowCopy, .appUr .workflowPanel, .appUr .introRight, .appUr .closing { text-align:right; }
+.appUr .workflowNumber { text-align:left; direction:ltr; }
+.appUr .metricEmpty { direction:rtl; }
+.appUr .scenarioPanel label b { float:left; }
+.appUr .monitorRows div { direction:rtl; }
+.appUr .responseCard { direction:rtl; }
+.appUr .closingMark { direction:ltr; }
+.appUr .heroText, .appUr .trustLine, .appUr .introRight>p, .appUr .workflowCopy p,
+.appUr .emptyState p, .appUr .responseCard p { line-height:2.05; }
+
+@media (max-width:1100px) {
+  .conceptFlow { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  .heroRule { left:20px; right:20px; top:25px; }
+  .conceptFlow { grid-template-columns:1fr 1fr; gap:8px; }
+  .conceptFlow>div { min-height:118px; }
+  .workflowSection { scroll-margin-top:120px; }
+}
+@media (max-width:520px) {
+  .conceptFlow { grid-template-columns:1fr; }
+  .conceptFlow>div { min-height:0; }
+}
+/* =========================================================
+   FLUXSCOPE — FINAL TYPOGRAPHY SYSTEM
+   English minimum: 12px
+   Urdu minimum: 14px
+   ========================================================= */
+
+
+/* =========================================================
+   ENGLISH — BASE
+   ========================================================= */
+
+body {
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   ENGLISH — NAVIGATION
+   ========================================================= */
+
+.desktopNav a {
+  font-size: 14px;
+}
+
+.navCta {
+  font-size: 13px;
+}
+
+.navCta span {
+  font-size: 20px;
+}
+
+.langToggle button {
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ENGLISH — SMALL UI / LABELS
+   Minimum: 12px
+   ========================================================= */
+
+.eyebrow,
+.stageTag,
+.trustLine,
+.miniLabel,
+.glanceHead small,
+.miniCard small,
+.metricEmpty small,
+.scenarioTop small,
+.panelHeader span,
+.responseCard small,
+.sideNav a,
+.sideNote,
+.sideNote strong,
+.productTop p,
+.cardLink,
+.railInner b,
+.railInner small,
+.emptyState p,
+.outlineButton,
+.traceNode > span,
+.traceNode small,
+.metricEmpty span,
+.scenarioPanel label,
+.scenarioPanel label b,
+.scenarioTop > span,
+.scenarioFooter span,
+.primarySmall,
+.finePrint,
+.compareHead,
+.compareRow,
+.neutralPill,
+.responseCard p,
+.monitorStatus,
+.monitorRows div,
+.monitorRows b,
+footer,
+.conceptFlow span,
+.conceptFlow small {
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   ENGLISH — NORMAL / BODY TEXT
+   ========================================================= */
+
+.heroText {
+  font-size: 17px;
+}
+
+.introRight > p {
+  font-size: 17px;
+}
+
+.workflowCopy p {
+  font-size: 16px;
+}
+
+.brandSlogan {
+  font-size: 21px;
+  line-height: 1.4;
+}
+
+
+/* =========================================================
+   ENGLISH — CARDS / IMPORTANT TEXT
+   ========================================================= */
+
+.miniCard strong {
+  font-size: 14px;
+}
+
+.traceNode strong {
+  font-size: 15px;
+}
+
+.glanceHead h4 {
+  font-size: 16px;
+}
+
+.conceptFlow strong {
+  font-size: 14px;
+}
+
+.compareRow strong {
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   ENGLISH — HEADINGS
+   ========================================================= */
+
+.productTop h3 {
+  font-size: 23px;
+}
+
+.emptyState h3 {
+  font-size: 22px;
+}
+
+.scenarioTop h3 {
+  font-size: 22px;
+}
+
+.responseCard h3 {
+  font-size: 24px;
+}
+
+.monitorCard h3 {
+  font-size: 26px;
+}
+
+.metricEmpty strong {
+  font-size: 28px;
+}
+
+
+/* =========================================================
+   ENGLISH — BRAND
+   ========================================================= */
+
+.brandWord span {
+  font-size: 28px;
+}
+
+.brandWord small {
+  font-size: 12px;
+}
+
+.brandCompact .brandWord span {
+  font-size: 18px;
+}
+
+.brandCompact .brandWord small {
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   ENGLISH — MAJOR HEADINGS
+   Preserve existing editorial hierarchy
+   ========================================================= */
+
+.hero h1 {
+  font-size: clamp(54px, 5.1vw, 86px);
+}
+
+.introBand h2 {
+  font-size: clamp(44px, 4.3vw, 68px);
+}
+
+.workflowCopy h2 {
+  font-size: clamp(40px, 4vw, 62px);
+}
+
+.closing h2 {
+  font-size: clamp(55px, 6vw, 92px);
+}
+
+
+/* =========================================================
+   ENGLISH — MOBILE
+   Minimum remains 12px
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+  .brandWord span {
+    font-size: 21px;
+  }
+
+  .brandCompact .brandWord span {
+    font-size: 18px;
+  }
+
+  .desktopNav a {
+    font-size: 14px;
+  }
+
+  .navCta {
+    font-size: 12px;
+  }
+
+  .langToggle button {
+    font-size: 12px;
+  }
+
+  .heroText {
+    font-size: 15px;
+  }
+
+  .workflowCopy p {
+    font-size: 15px;
+  }
+
+  .railInner b,
+  .railInner small {
+    font-size: 12px;
+  }
+
+  .compareHead {
+    font-size: 12px;
+  }
+
+  .compareRow {
+    font-size: 13px;
+  }
+
+  footer {
+    font-size: 12px;
+  }
+}
+
+
+/* =========================================================
+   URDU — BASE
+   Minimum: 14px
+   Normal body: 16–17px
+   ========================================================= */
+
+.appUr {
+  direction: rtl;
+
+  font-family:
+    "Jameel Noori Nastaleeq",
+    "Jameel Noori Nastaleeq Kasheeda",
+    "Noto Nastaliq Urdu",
+    serif;
+
+  font-size: 16px;
+  line-height: 2;
+}
+
+
+/* =========================================================
+   URDU — SMALL UI
+   Minimum: 14px
+   ========================================================= */
+
+.appUr .eyebrow,
+.appUr .stageTag,
+.appUr .trustLine,
+.appUr .miniLabel,
+.appUr .glanceHead small,
+.appUr .miniCard small,
+.appUr .metricEmpty small,
+.appUr .scenarioTop small,
+.appUr .panelHeader span,
+.appUr .responseCard small,
+.appUr .sideNav a,
+.appUr .sideNote,
+.appUr .sideNote strong,
+.appUr .productTop p,
+.appUr .cardLink,
+.appUr .railInner b,
+.appUr .railInner small,
+.appUr .emptyState p,
+.appUr .outlineButton,
+.appUr .traceNode > span,
+.appUr .traceNode small,
+.appUr .metricEmpty span,
+.appUr .scenarioPanel label,
+.appUr .scenarioPanel label b,
+.appUr .scenarioTop > span,
+.appUr .scenarioFooter span,
+.appUr .primarySmall,
+.appUr .finePrint,
+.appUr .compareHead,
+.appUr .compareRow,
+.appUr .neutralPill,
+.appUr .responseCard p,
+.appUr .monitorStatus,
+.appUr .monitorRows div,
+.appUr .monitorRows b,
+.appUr footer,
+.appUr .conceptFlow span,
+.appUr .conceptFlow small {
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   URDU — NORMAL BODY TEXT
+   ========================================================= */
+
+.appUr .heroText,
+.appUr .introRight > p,
+.appUr .workflowCopy p {
+  font-size: 17px;
+  line-height: 2.1;
+}
+
+
+/* =========================================================
+   URDU — IMPORTANT / HIGHLIGHT TEXT
+   ========================================================= */
+
+.appUr .brandSlogan {
+  font-size: 18px;
+  line-height: 2.1;
+}
+
+.appUr .miniCard strong {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.appUr .traceNode strong {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.appUr .compareRow strong {
+  font-size: 16px;
+}
+
+.appUr .conceptFlow strong {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.appUr .glanceHead h4 {
+  font-size: 17px;
+}
+
+
+/* =========================================================
+   URDU — HEADINGS
+   ========================================================= */
+
+.appUr .productTop h3 {
+  font-size: 24px;
+}
+
+.appUr .emptyState h3 {
+  font-size: 24px;
+}
+
+.appUr .scenarioTop h3 {
+  font-size: 24px;
+}
+
+.appUr .responseCard h3 {
+  font-size: 26px;
+}
+
+.appUr .monitorCard h3 {
+  font-size: 28px;
+  line-height: 1.8;
+}
+
+
+/* =========================================================
+   URDU — MAJOR HEADINGS
+   ========================================================= */
+
+.appUr .hero h1 {
+  font-size: clamp(42px, 5vw, 76px);
+  line-height: 1.3;
+}
+
+.appUr .introBand h2 {
+  font-size: clamp(38px, 4.3vw, 64px);
+  line-height: 1.4;
+}
+
+.appUr .workflowCopy h2 {
+  font-size: clamp(36px, 4vw, 58px);
+  line-height: 1.4;
+}
+
+.appUr .closing h2 {
+  font-size: clamp(42px, 5.5vw, 78px);
+  line-height: 1.35;
+}
+
+
+/* =========================================================
+   URDU — BRAND
+   FLUXSCOPE stays Latin / LTR
+   ========================================================= */
+
+.appUr .brandWord span {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 18px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.appUr .brandWord small {
+  font-family:
+    "Jameel Noori Nastaleeq",
+    "Jameel Noori Nastaleeq Kasheeda",
+    "Noto Nastaliq Urdu",
+    serif;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   URDU — NAVIGATION
+   ========================================================= */
+
+.appUr .desktopNav a {
+  font-size: 15px;
+}
+
+.appUr .langToggle button {
+  font-size: 14px;
+}
+
+.appUr .navCta {
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   URDU — MOBILE
+   Minimum remains 14px
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+  .appUr {
+    font-size: 16px;
+  }
+
+  .appUr .brandWord span {
+    font-size: 18px;
+  }
+
+  .appUr .brandWord small {
+    font-size: 14px;
+  }
+
+  .appUr .heroText {
+    font-size: 16px;
+  }
+
+  .appUr .workflowCopy p {
+    font-size: 16px;
+  }
+
+  .appUr .railInner b,
+  .appUr .railInner small {
+    font-size: 14px;
+  }
+
+  .appUr .compareRow {
+    font-size: 14px;
+  }
+
+  .appUr footer {
+    font-size: 14px;
+  }
+}
+
+
+/* =========================================================
+   LAYOUT TYPOGRAPHY BASELINE
+   ========================================================= */
+
+.productSidebar,
+.productMain,
+.stageRail,
+.workflowSection,
+.introBand,
+.closing,
+footer {
+  font-size: 14px;
+}
+
+.appUr .productSidebar,
+.appUr .productMain,
+.appUr .stageRail,
+.appUr .workflowSection,
+.appUr .introBand,
+.appUr .closing,
+.appUr footer {
+  font-size: 16px;
+}
+
+
+/* =========================================================
+   LOGO CONTAINMENT — CSS ONLY
+   Actual logo markup will be fixed in page.tsx
+   ========================================================= */
+
+.productShell {
+  grid-template-columns: 190px minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.productSidebar {
+  min-width: 0;
+  overflow: hidden;
+  padding: 22px 14px;
+}
+
+.productSidebar .brand {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.productSidebar .brandMark {
+  flex: 0 0 auto;
+}
+
+.productSidebar .brandWord {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.productSidebar .brandWord span {
+  white-space: nowrap;
+}
+
+.productMain {
+  min-width: 0;
+  overflow: hidden;
+}
