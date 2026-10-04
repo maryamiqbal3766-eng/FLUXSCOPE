@@ -11,7 +11,8 @@ import {
   type ImpactGraph,
   type ImpactResultRecord,
 } from "../lib/api";
-import { formatSigned, humanize, type StageKey, type StageStatus } from "../lib/workflow";
+import { LanguageProvider, type Language } from "../lib/i18n";
+import { formatSigned, humanize, rawTerm, term, type StageKey, type StageStatus } from "../lib/workflow";
 import CompareStage from "../components/workflow/CompareStage";
 import DetectStage from "../components/workflow/DetectStage";
 import MonitorStage, { type MonitoringEntry } from "../components/workflow/MonitorStage";
@@ -20,7 +21,7 @@ import RespondStage from "../components/workflow/RespondStage";
 import SimulateStage, { type ScenarioRun } from "../components/workflow/SimulateStage";
 import TraceStage from "../components/workflow/TraceStage";
 
-type Language = "en" | "ur";
+// Language type is shared with the workflow components (lib/i18n).
 
 type Stage = {
   key: StageKey;
@@ -101,6 +102,7 @@ export default function Home() {
   const selectShock = useCallback(
     (next: EconomicShockEvent) => {
       setShockState(next);
+      setRequestedFields([]);
       clearFromMapping();
     },
     [clearFromMapping],
@@ -158,60 +160,68 @@ export default function Home() {
 
   /* ---------------- Stage statuses derived from real workflow state ---------------- */
   const completedRuns = runs.filter((run) => run.result).length;
-  const statuses: Record<StageKey, StageStatus> = useMemo(
-    () => ({
+  const isUrdu = language === "ur";
+  const statuses: Record<StageKey, StageStatus> = useMemo(() => {
+    const tr = (en: string, ur: string) => (isUrdu ? ur : en);
+    return {
       detect: shock
-        ? { tone: "done", label: `Shock selected · ${shock.verification_status}` }
-        : { tone: "ready", label: "No source analysed yet" },
+        ? {
+            tone: "done",
+            label: tr(
+              `Shock selected · ${shock.verification_status}`,
+              `جھٹکا منتخب · ${rawTerm(shock.verification_status, "ur")}`,
+            ),
+          }
+        : { tone: "ready", label: tr("No source analysed yet", "ابھی کوئی ذریعہ نہیں پرکھا گیا") },
       trace: !shock
-        ? { tone: "locked", label: "Waiting for DETECT" }
+        ? { tone: "locked", label: tr("Waiting for DETECT", "کھوج کا انتظار") }
         : mapping
-          ? { tone: "done", label: "Impact mapping available" }
+          ? { tone: "done", label: tr("Impact mapping available", "اثرات کا نقشہ تیار") }
           : profile
-            ? { tone: "ready", label: "Business confirmed · mapping needed" }
-            : { tone: "ready", label: "Business data missing" },
+            ? { tone: "ready", label: tr("Business confirmed · mapping needed", "کاروبار تصدیق شدہ · نقشہ درکار") }
+            : { tone: "ready", label: tr("Business data missing", "کاروباری معلومات درکار") },
       quantify: !mapping
-        ? { tone: "locked", label: "Waiting for TRACE" }
+        ? { tone: "locked", label: tr("Waiting for TRACE", "تجزیے کا انتظار") }
         : impact
-          ? { tone: "done", label: "Calculated" }
+          ? { tone: "done", label: tr("Calculated", "حساب مکمل") }
           : quantifyBlocker
             ? {
                 tone: "blocked",
-                label: quantifyBlocker === "UNSUPPORTED_SHOCK_TYPE" ? "Unsupported shock type" : "Blocked · see details",
+                label:
+                  quantifyBlocker === "UNSUPPORTED_SHOCK_TYPE"
+                    ? tr("Unsupported shock type", "غیر معاون قسم کا جھٹکا")
+                    : tr("Blocked · see details", "رکاوٹ · تفصیل دیکھیں"),
               }
-            : { tone: "ready", label: "Ready to calculate" },
+            : { tone: "ready", label: tr("Ready to calculate", "حساب کے لیے تیار") },
       simulate: !impact
-        ? { tone: "locked", label: "Waiting for QUANTIFY" }
+        ? { tone: "locked", label: tr("Waiting for QUANTIFY", "حساب کا انتظار") }
         : completedRuns > 0
-          ? { tone: "done", label: `${completedRuns} scenario(s) simulated` }
+          ? { tone: "done", label: tr(`${completedRuns} scenario(s) simulated`, `${completedRuns} منظرنامے مکمل`) }
           : runs.length > 0
-            ? { tone: "ready", label: "Draft · confirm and run" }
-            : { tone: "ready", label: "Assumptions missing" },
+            ? { tone: "ready", label: tr("Draft · confirm and run", "مسودہ · تصدیق کر کے چلائیں") }
+            : { tone: "ready", label: tr("Assumptions missing", "مفروضے درکار") },
       compare: completedRuns === 0
-        ? { tone: "locked", label: "Waiting for SIMULATE" }
+        ? { tone: "locked", label: tr("Waiting for SIMULATE", "محاکات کا انتظار") }
         : comparison
-          ? { tone: "done", label: "Compared" }
-          : { tone: "ready", label: "Ready to compare" },
+          ? { tone: "done", label: tr("Compared", "موازنہ مکمل") }
+          : { tone: "ready", label: tr("Ready to compare", "موازنے کے لیے تیار") },
       respond: !comparison
-        ? { tone: "locked", label: "Waiting for COMPARE" }
+        ? { tone: "locked", label: tr("Waiting for COMPARE", "موازنے کا انتظار") }
         : decision?.decision_status === "confirmed"
-          ? { tone: "done", label: "Decision confirmed" }
+          ? { tone: "done", label: tr("Decision confirmed", "فیصلہ تصدیق شدہ") }
           : decision
-            ? { tone: "ready", label: "Awaiting your confirmation" }
-            : { tone: "ready", label: "No response recorded" },
+            ? { tone: "ready", label: tr("Awaiting your confirmation", "آپ کی تصدیق کا انتظار") }
+            : { tone: "ready", label: tr("No response recorded", "ابھی کوئی ردِعمل درج نہیں") },
       monitor: decision?.decision_status !== "confirmed"
-        ? { tone: "locked", label: "Waiting for RESPOND" }
+        ? { tone: "locked", label: tr("Waiting for RESPOND", "عمل کا انتظار") }
         : monitoring.length > 0
-          ? { tone: "done", label: `${monitoring.length} result(s) compared` }
-          : { tone: "ready", label: "Awaiting actual results" },
-    }),
-    [shock, mapping, profile, impact, quantifyBlocker, runs.length, completedRuns, comparison, decision, monitoring.length],
-  );
+          ? { tone: "done", label: tr(`${monitoring.length} result(s) compared`, `${monitoring.length} نتائج کا موازنہ ہوا`) }
+          : { tone: "ready", label: tr("Awaiting actual results", "حقیقی نتائج کا انتظار") },
+    };
+  }, [isUrdu, shock, mapping, profile, impact, quantifyBlocker, runs.length, completedRuns, comparison, decision, monitoring.length]);
 
   const currentStage: StageKey =
     stages.find((stage) => statuses[stage.key].tone !== "done")?.key ?? "monitor";
-
-  const isUrdu = language === "ur";
 
   const copy = isUrdu
     ? {
@@ -227,8 +237,8 @@ export default function Home() {
         start: "شروع کریں",
         learn: "طریقۂ کار دیکھیں",
         trust: "تصدیق شدہ ذرائع، شفاف حسابات اور کاروباری مالک کے اختیار پر مبنی۔",
-        intelligence: "کاروباری ذہانت",
-        welcome: "FLUXSCOPE میں خوش آمدید",
+        intelligence: "آپ کا ورک فلو",
+        welcome: "ورک فلو کی موجودہ صورتحال",
         signal: "معاشی اشارہ",
         impact: "کاروباری اثر",
         responses: "ردِعمل کے اختیارات",
@@ -238,19 +248,18 @@ export default function Home() {
         method: "FLUXSCOPE کا طریقۂ کار",
         introTitleA: "جو بدلا ہے وہاں سے",
         introTitleB: "آپ کے فیصلے تک۔",
-        intro: "FLUXSCOPE کاروباری مالک کی جگہ فیصلہ نہیں کرتا۔ یہ معاشی اشارے سے کاروباری ردِعمل تک کے راستے کو سمجھنے، حساب کرنے، آزمانے، موازنہ کرنے اور نگرانی کرنے میں آسان بناتا ہے۔",
+        intro: "FLUXSCOPE کاروباری مالک کی جگہ فیصلہ نہیں کرتا۔ نیچے دیے گئے سات مراحل مکمل کریں: دکھائی جانے والی ہر قدر بیک اینڈ سے آتی ہے، اور ہر رکاوٹ بتاتی ہے کہ کیا کمی ہے اور آگے کیا کرنا ہے۔",
         rule1: "تصدیق شدہ معلومات",
         rule2: "متعین حسابات",
         rule3: "شفاف محاکات",
         rule4: "کاروباری مالک کے اختیار میں فیصلہ",
         closingTitleA: "سمجھیں۔",
         closingTitleB: "محاکات کریں۔",
-        closingTitleC: "فیصلہ کریں.",
+        closingTitleC: "فیصلہ کریں۔",
         closingBody: "پاکستانی ایس ایم ایز کے لیے فیصلہ سازی کا نظام، جو تصدیق شدہ معلومات، شفاف حسابات اور کاروباری مالک کے اختیار پر مبنی ہے۔",
         back: "اوپر جائیں",
         footer: "© 2026 FLUXSCOPE۔ ڈیمو۔",
         footerTag: "سمجھیں · محاکات کریں · فیصلہ کریں",
-        workflowNote: "ورک فلو کے فارم انگریزی میں ہیں۔",
       }
     : {
         home: "Home",
@@ -288,31 +297,38 @@ export default function Home() {
         back: "Back to top",
         footer: "© 2026 FLUXSCOPE. Demo.",
         footerTag: "Understand · Simulate · Decide",
-        workflowNote: "",
       };
 
+  const tr = (en: string, ur: string) => (isUrdu ? ur : en);
   const signalSummary = shock
-    ? `${humanize(shock.shock_type)} · ${shock.verification_status}`
-    : "No shock selected yet";
+    ? tr(
+        `${humanize(shock.shock_type)} · ${shock.verification_status}`,
+        `${term(shock.shock_type, "ur")} · ${rawTerm(shock.verification_status, "ur")}`,
+      )
+    : tr("No shock selected yet", "ابھی کوئی جھٹکا منتخب نہیں");
   const impactSummary = impact
-    ? `Operating profit change ${formatSigned(impact.result.profit_impact)} PKR`
+    ? tr(
+        `Operating profit change ${formatSigned(impact.result.profit_impact)} PKR`,
+        `آپریٹنگ منافع میں تبدیلی: ${formatSigned(impact.result.profit_impact)} روپے`,
+      )
     : mapping
-      ? "Mapped · not yet quantified"
+      ? tr("Mapped · not yet quantified", "نقشہ تیار · حساب ابھی باقی")
       : profile
-        ? "Business facts confirmed"
-        : "No business facts yet";
+        ? tr("Business facts confirmed", "کاروباری حقائق تصدیق شدہ")
+        : tr("No business facts yet", "ابھی کوئی کاروباری حقائق نہیں");
   const responseSummary =
     decision?.decision_status === "confirmed"
-      ? "Decision confirmed"
+      ? tr("Decision confirmed", "فیصلہ تصدیق شدہ")
       : decision
-        ? "Awaiting your confirmation"
+        ? tr("Awaiting your confirmation", "آپ کی تصدیق کا انتظار")
         : comparison
-          ? "Compared · no decision yet"
+          ? tr("Compared · no decision yet", "موازنہ مکمل · فیصلہ ابھی نہیں")
           : completedRuns > 0
-            ? `${completedRuns} scenario(s) simulated`
-            : "No scenarios yet";
+            ? tr(`${completedRuns} scenario(s) simulated`, `${completedRuns} منظرنامے مکمل`)
+            : tr("No scenarios yet", "ابھی کوئی منظرنامہ نہیں");
 
   return (
+    <LanguageProvider value={language}>
     <main className={isUrdu ? "appUr" : "appEn"}>
       <header className="topbar">
         <a href="#top" className="logoLink">
@@ -329,10 +345,10 @@ export default function Home() {
         <div className="navActions">
           <span className={`wfPill wfPill-${backendStatus === "connected" ? "done" : backendStatus === "checking" ? "ready" : "blocked"}`}>
             {backendStatus === "checking"
-              ? "Checking backend…"
+              ? tr("Checking backend…", "بیک اینڈ کی جانچ جاری…")
               : backendStatus === "connected"
-                ? "Backend connected"
-                : "Backend unreachable"}
+                ? tr("Backend connected", "بیک اینڈ منسلک")
+                : tr("Backend unreachable", "بیک اینڈ دستیاب نہیں")}
           </span>
           <div className="langToggle" aria-label="Language selector">
             <button className={language === "ur" ? "selected" : ""} onClick={() => setLanguage("ur")}>
@@ -420,19 +436,19 @@ export default function Home() {
                   <a className="miniCard" href="#stage-detect">
                     <span className="cardIcon">↗</span>
                     <small>{copy.signal}</small>
-                    <strong dir="ltr">{signalSummary}</strong>
+                    <strong dir={isUrdu ? "rtl" : "ltr"}>{signalSummary}</strong>
                     <span className="cardLink">DETECT →</span>
                   </a>
                   <a className="miniCard" href="#stage-quantify">
                     <span className="cardIcon">▧</span>
                     <small>{copy.impact}</small>
-                    <strong dir="ltr">{impactSummary}</strong>
+                    <strong dir={isUrdu ? "rtl" : "ltr"}>{impactSummary}</strong>
                     <span className="cardLink">TRACE · QUANTIFY →</span>
                   </a>
                   <a className="miniCard" href="#stage-respond">
                     <span className="cardIcon">◇</span>
                     <small>{copy.responses}</small>
-                    <strong dir="ltr">{responseSummary}</strong>
+                    <strong dir={isUrdu ? "rtl" : "ltr"}>{responseSummary}</strong>
                     <span className="cardLink">SIMULATE · RESPOND →</span>
                   </a>
                 </div>
@@ -450,7 +466,7 @@ export default function Home() {
                       <div key={key}>
                         <span>0{index + 1}</span>
                         <strong>{stages.find((stage) => stage.key === key)?.[isUrdu ? "ur" : "en"]}</strong>
-                        <small dir="ltr">{statuses[key].label}</small>
+                        <small dir={isUrdu ? "rtl" : "ltr"}>{statuses[key].label}</small>
                       </div>
                     ))}
                   </div>
@@ -472,7 +488,7 @@ export default function Home() {
               <span className="railIcon">{stage.icon}</span>
               <span>
                 <b>{isUrdu ? stage.ur : stage.en}</b>
-                <small className={`wfRailStatus wfRailStatus-${statuses[stage.key].tone}`} dir="ltr">
+                <small className={`wfRailStatus wfRailStatus-${statuses[stage.key].tone}`} dir={isUrdu ? "rtl" : "ltr"}>
                   {statuses[stage.key].label}
                 </small>
               </span>
@@ -496,7 +512,6 @@ export default function Home() {
         </div>
         <div className="introRight">
           <p>{copy.intro}</p>
-          {copy.workflowNote ? <p>{copy.workflowNote}</p> : null}
           <div className="ruleList">
             <span>01&nbsp; {copy.rule1}</span>
             <span>02&nbsp; {copy.rule2}</span>
@@ -504,11 +519,15 @@ export default function Home() {
             <span>04&nbsp; {copy.rule4}</span>
           </div>
           {backendStatus === "disconnected" ? (
-            <div className="wfNotice wfNotice-error" dir="ltr">
-              <strong>The backend is not reachable</strong>
+            <div className="wfNotice wfNotice-error" dir={isUrdu ? "rtl" : "ltr"}>
+              <strong>{tr("The backend is not reachable", "بیک اینڈ تک رسائی نہیں ہو رہی")}</strong>
               <p>
-                No stage can run until the FLUXSCOPE API is available at <code>{API_BASE_URL}</code>.
-                Start the backend and reload this page.
+                {tr(
+                  "No stage can run until the FLUXSCOPE API is available at ",
+                  "جب تک FLUXSCOPE API اس پتے پر دستیاب نہ ہو کوئی مرحلہ نہیں چل سکتا: ",
+                )}
+                <code>{API_BASE_URL}</code>
+                {tr(". Start the backend and reload this page.", "۔ بیک اینڈ چلائیں اور یہ صفحہ دوبارہ لوڈ کریں۔")}
               </p>
             </div>
           ) : null}
@@ -599,5 +618,6 @@ export default function Home() {
         <span>{copy.footerTag}</span>
       </footer>
     </main>
+    </LanguageProvider>
   );
 }

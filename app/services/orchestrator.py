@@ -295,10 +295,13 @@ class WorkflowOrchestrator:
     def update_scenario(self, scenario_id: UUID, payload: ScenarioUpdate) -> ScenarioDefinition:
         scenario = self.store.required(self.store.scenarios, scenario_id, "Scenario")
         assert isinstance(scenario, ScenarioDefinition)
-        changes = payload.model_dump(exclude_none=True)
-        for field, value in changes.items():
-            setattr(scenario, field, value)
+        # Keep validated model objects (model_dump would store plain dicts).
+        for field in ("name", "changed_assumptions"):
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(scenario, field, value)
         scenario.assumption_confirmation_status = AssumptionConfirmationStatus.DRAFT
+        scenario.processing_status = ProcessingStatus.READY
         scenario.updated_at = utc_now()
         return scenario
 

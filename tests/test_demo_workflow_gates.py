@@ -302,6 +302,32 @@ def test_unsupported_scenario_assumption_is_blocked_not_ignored() -> None:
     assert error["stage"] == "SIMULATE"
 
 
+def test_edited_scenario_runs_with_the_new_assumptions() -> None:
+    business_id = uuid4()
+    impact_result_id = baseline_result(business_id)
+    created = client.post(
+        "/api/v1/scenarios",
+        json={
+            "business_id": str(business_id),
+            "base_impact_result_id": impact_result_id,
+            "name": "Owner scenario",
+            "changed_assumptions": [{"field_reference": "selling_price_per_unit", "value": "208"}],
+        },
+    ).json()
+    edited = client.patch(
+        f"/api/v1/scenarios/{created['id']}",
+        json={"changed_assumptions": [{"field_reference": "selling_price_per_unit", "value": "220"}]},
+    )
+    assert edited.status_code == 200
+    assert edited.json()["assumption_confirmation_status"] == "draft"
+    assert client.post(f"/api/v1/scenarios/{created['id']}/confirm").status_code == 200
+
+    run = client.post(f"/api/v1/scenarios/{created['id']}/run")
+    assert run.status_code == 200, run.text
+    # 1000 units x 220 = 220,000 projected revenue.
+    assert run.json()["result"]["projected"]["shocked_revenue"] == 220000
+
+
 def test_invalid_scenario_value_is_a_structured_error() -> None:
     business_id = uuid4()
     impact_result_id = baseline_result(business_id)

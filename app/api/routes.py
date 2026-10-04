@@ -94,7 +94,7 @@ def detect_economic_shocks(
             f"The extraction service could not be reached or refused the request ({type(exc).__name__}).",
             stage="DETECT",
         ) from exc
-    except (json.JSONDecodeError, KeyError, ValidationError, ValueError) as exc:
+    except (json.JSONDecodeError, KeyError, TypeError, AttributeError, ValidationError, ValueError) as exc:
         raise ContractError(
             500,
             "PROCESSING_FAILED",

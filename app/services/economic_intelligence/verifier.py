@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 
 from .schemas import ShockCandidate, VerificationResult
 from .source_registry import ApprovedSourceRegistry
@@ -40,11 +41,23 @@ class EconomicEvidenceVerifier:
                 )
 
             if evidence.value_text:
-                value_tokens = self._normalized_value_tokens(evidence.value_text)
-                if value_tokens and not any(token in haystack for token in value_tokens):
+                # Compare whole numbers, not substrings: "20" must not match
+                # "2026" and "1" must not match "11.1".
+                value_numbers = self._numbers(evidence.value_text)
+                if value_numbers and not value_numbers & self._numbers(evidence.quote):
                     reasons.append(
                         "Reported value text is not present in the evidence quote."
                     )
+
+            # A percentage unit must be stated by the evidence; a level such as
+            # "300 rupees" must not become a "300 percent" change.
+            unit = (candidate.unit or "").lower()
+            if ("%" in unit or "percent" in unit) and not (
+                "%" in haystack or "percent" in haystack
+            ):
+                reasons.append(
+                    "The percentage unit is not stated in the evidence quote."
+                )
 
         if reasons:
             return VerificationResult(status="REJECTED", reasons=reasons)
@@ -63,8 +76,12 @@ class EconomicEvidenceVerifier:
         }
 
     @staticmethod
-    def _normalized_value_tokens(text: str) -> set[str]:
-        return {
-            token.replace(",", "")
-            for token in re.findall(r"[-+]?\d+(?:[.,]\d+)?%?", text.lower())
-        }
+    def _numbers(text: str) -> set[Decimal]:
+        """Whole numeric values in the text (thousands separators allowed), unsigned."""
+        numbers: set[Decimal] = set()
+        for token in re.findall(r"(?<![\d.])\d{1,3}(?:,\d{3})+(?:\.\d+)?|(?<![\d.,])\d+(?:\.\d+)?", text):
+            try:
+                numbers.add(abs(Decimal(token.replace(",", ""))).normalize())
+            except InvalidOperation:
+                continue
+        return numbers

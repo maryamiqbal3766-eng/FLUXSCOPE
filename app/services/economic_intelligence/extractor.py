@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -46,6 +47,8 @@ Rules:
 12. The "variable" field must identify the economic variable explicitly supported by the evidence.
 13. If magnitude, unit, effective date, or dependencies are not explicitly supported by the
     evidence, use null for magnitude/unit/effective_date and [] for potential_dependencies.
+    effective_date must be an ISO date (YYYY-MM-DD) and only when the evidence states an
+    exact calendar day; for a month, period, or vague timing use null.
 14. Do not return source, publisher, title, or evidence fields. The application attaches
     source evidence separately.
 15. When a numeric value is explicitly present in the supplied evidence,
@@ -101,6 +104,8 @@ class EconomicShockExtractor:
 
         candidates: list[ShockCandidate] = []
         for item in payload:
+            if not isinstance(item, dict):
+                raise ValueError("Each Economic Monitor item must be a JSON object.")
             # An unchanged policy rate is evidence/context, not an Economic Shock Event
             # under the locked DETECT contract.
             if item.get("direction_or_change") == "unchanged":
@@ -122,10 +127,35 @@ class EconomicShockExtractor:
         if isinstance(response, dict):
             return response
         text = str(response).strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1]
-            text = text.rsplit("```", 1)[0]
+        # Accept a Markdown code fence, on one line or several.
+        fenced = re.fullmatch(r"```[A-Za-z]*\s*(.*?)\s*```", text, flags=re.DOTALL)
+        if fenced:
+            text = fenced.group(1)
         return json.loads(text)
+
+    @staticmethod
+    def _string_list(value: Any) -> list[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or not all(isinstance(entry, str) for entry in value):
+            raise ValueError("potential_dependencies must be a list of strings.")
+        return value
+
+    @staticmethod
+    def _exact_date(value: Any) -> date | None:
+        """Accept only an exact ISO calendar date.
+
+        Sources often state timing as a month or period ("September 2026").
+        That is not an exact effective date, so it is treated as not stated
+        rather than guessed or allowed to fail the whole detection.
+        """
+
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(str(value).strip())
+        except ValueError:
+            return None
 
     @staticmethod
     def _candidate_from_item(
@@ -148,12 +178,14 @@ class EconomicShockExtractor:
             except InvalidOperation as exc:
                 raise ValueError("magnitude must be numeric when supplied") from exc
 
-        reported_value = item.get("reported_value")
-        if reported_value is None and magnitude is not None:
-            # The verifier must be able to find the extracted magnitude in
-            # the quoted evidence; otherwise an LLM-supplied number could be
-            # marked verified without appearing in the source.
-            reported_value = format(magnitude.normalize(), "f")
+        # The verifier checks the number that will actually be used: the
+        # magnitude. An LLM-supplied "reported_value" must never stand in for
+        # it, or a different number could be verified than the one calculated.
+        reported_value = (
+            format(magnitude.normalize(), "f")
+            if magnitude is not None
+            else item.get("reported_value")
+        )
         evidence = SourceEvidence(
             source_id=source_id,
             title=title,
@@ -171,9 +203,9 @@ class EconomicShockExtractor:
             direction_or_change=item["direction_or_change"],
             magnitude=magnitude,
             unit=item.get("unit"),
-            effective_date=date.fromisoformat(item["effective_date"])
-            if item.get("effective_date")
-            else None,
+            effective_date=EconomicShockExtractor._exact_date(item.get("effective_date")),
             source_evidence=[evidence],
-            potential_dependencies=list(item.get("potential_dependencies") or []),
+            potential_dependencies=EconomicShockExtractor._string_list(
+                item.get("potential_dependencies")
+            ),
         )

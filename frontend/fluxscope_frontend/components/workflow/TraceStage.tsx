@@ -14,11 +14,14 @@ import {
   type ImpactGraph,
   type ImpactNode,
 } from "../../lib/api";
+import { useLanguage, useT } from "../../lib/i18n";
 import {
   BUSINESS_FIELDS,
   fieldLabel,
-  humanize,
   isDecimal,
+  rawTerm,
+  term,
+  unitLabel,
   type StageStatus,
 } from "../../lib/workflow";
 import {
@@ -28,6 +31,7 @@ import {
   InfoNotice,
   KeyValues,
   LockedNotice,
+  Ltr,
   NextStep,
   StageFrame,
   StepTitle,
@@ -79,6 +83,8 @@ export default function TraceStage({
   onMapped,
   requestedFields,
 }: Props) {
+  const t = useT();
+  const language = useLanguage();
   const [values, setValues] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<BusinessIntakeDraft | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -140,46 +146,64 @@ export default function TraceStage({
     <StageFrame
       id="stage-trace"
       number={2}
-      tag="⌘ TRACE"
-      title="How does it reach your business?"
+      tag={t("⌘ TRACE", "⌘ تجزیہ · TRACE")}
+      title={t("How does it reach your business?", "یہ آپ کے کاروبار تک کیسے پہنچتا ہے؟")}
       status={status}
       explanation={
         <>
           <p>
-            Enter your own business facts, review them, and confirm them. Only confirmed facts are
-            used. The backend then maps the selected shock through your business: economic shock →
-            business dependency → operational effect → financial effect.
+            {t(
+              "Enter your own business facts, review them, and confirm them. Only confirmed facts are used. The backend then maps the selected shock through your business: economic shock → business dependency → operational effect → financial effect.",
+              "اپنے کاروبار کے حقائق درج کریں، ان کا جائزہ لیں اور تصدیق کریں۔ صرف تصدیق شدہ حقائق استعمال ہوتے ہیں۔ پھر بیک اینڈ منتخب جھٹکے کا راستہ آپ کے کاروبار میں دکھاتا ہے: معاشی جھٹکا ← کاروباری انحصار ← عملی اثر ← مالی اثر۔",
+            )}
           </p>
           <p>
-            <b>Next:</b> QUANTIFY uses these confirmed facts with the verified shock.
+            <b>{t("Next:", "اگلا قدم:")}</b>{" "}
+            {t(
+              "QUANTIFY uses these confirmed facts with the verified shock.",
+              "حساب (QUANTIFY) یہ تصدیق شدہ حقائق اور تصدیق شدہ جھٹکا استعمال کرتا ہے۔",
+            )}
           </p>
         </>
       }
     >
       {!shock ? (
         <LockedNotice
-          requirement="Select a detected economic shock in DETECT first. TRACE maps that specific shock to your business."
+          requirement={t(
+            "Select a detected economic shock in DETECT first. TRACE maps that specific shock to your business.",
+            "پہلے کھوج (DETECT) میں پایا گیا کوئی معاشی جھٹکا منتخب کریں۔ تجزیہ اسی جھٹکے کو آپ کے کاروبار سے جوڑتا ہے۔",
+          )}
           href="#stage-detect"
         />
       ) : (
         <>
-          <InfoNotice title="Shock being traced">
+          <InfoNotice title={t("Shock being traced", "زیرِ تجزیہ جھٹکا")}>
             <p>
-              {humanize(shock.shock_type)} — {shock.economic_variable} ({shock.direction_or_change}
-              {shock.magnitude ? ` ${shock.magnitude} ${shock.unit ?? ""}` : ""}), verification:{" "}
-              <b>{shock.verification_status}</b>
+              {term(shock.shock_type, language)} — <bdi dir="auto">{shock.economic_variable}</bdi> (
+              {rawTerm(shock.direction_or_change, language)}
+              {shock.magnitude ? (
+                <>
+                  {" "}
+                  <Ltr>{shock.magnitude}</Ltr> {shock.unit ? unitLabel(shock.unit, language) : ""}
+                </>
+              ) : (
+                ""
+              )}
+              ){t(", verification: ", "، تصدیق: ")}
+              <b>{rawTerm(shock.verification_status, language)}</b>
             </p>
           </InfoNotice>
 
-          <StepTitle index={1}>Enter your business facts</StepTitle>
+          <StepTitle index={1}>{t("Enter your business facts", "اپنے کاروبار کے حقائق درج کریں")}</StepTitle>
           <p className="wfLead">
-            Use one consistent period (for example, one month) for every quantity and amount. Leave a
-            field empty if you do not know it. Nothing is filled in for you, and QUANTIFY will list
-            anything it still needs.
+            {t(
+              "Use one consistent period (for example, one month) for every quantity and amount. Leave a field empty if you do not know it. Nothing is filled in for you, and QUANTIFY will list anything it still needs.",
+              "ہر مقدار اور رقم کے لیے ایک ہی مدت استعمال کریں (مثلاً ایک ماہ)۔ جو معلوم نہ ہو وہ خانہ خالی چھوڑ دیں۔ آپ کی جگہ کچھ نہیں بھرا جاتا، اور حساب (QUANTIFY) جو کچھ مزید درکار ہو اس کی فہرست دے گا۔",
+            )}
           </p>
           {requestedFields.length > 0 ? (
-            <InfoNotice tone="warn" title="QUANTIFY asked for these facts">
-              <p>{requestedFields.map(fieldLabel).join(", ")}</p>
+            <InfoNotice tone="warn" title={t("QUANTIFY asked for these facts", "حساب (QUANTIFY) کو یہ حقائق درکار ہیں")}>
+              <p>{requestedFields.map((field) => fieldLabel(field, language)).join(t(", ", "، "))}</p>
             </InfoNotice>
           ) : null}
           <div className="wfGrid">
@@ -190,17 +214,22 @@ export default function TraceStage({
               return (
                 <label key={field.key} className={`wfField ${bad || requested ? "wfFieldBad" : ""}`}>
                   <span>
-                    {field.label} <em>({field.unit})</em>
+                    {t(field.label, field.labelUr)} <em>({unitLabel(field.unit, language)})</em>
                   </span>
                   <input
                     inputMode="decimal"
+                    dir="ltr"
                     value={value}
                     disabled={draft !== null}
                     onChange={(event) =>
                       setValues((current) => ({ ...current, [field.key]: event.target.value }))
                     }
                   />
-                  <small>{bad ? "Enter a non-negative number, e.g. 1250 or 12.5" : field.help}</small>
+                  <small>
+                    {bad
+                      ? t("Enter a non-negative number, e.g. 1250 or 12.5", "منفی کے علاوہ کوئی عدد درج کریں، مثلاً 1250 یا 12.5")
+                      : t(field.help, field.helpUr)}
+                  </small>
                 </label>
               );
             })}
@@ -212,13 +241,15 @@ export default function TraceStage({
                 busy={busy === "draft"}
                 disabled={entered.length === 0 || invalid.length > 0}
               >
-                Submit facts for review
+                {t("Submit facts for review", "حقائق جائزے کے لیے جمع کریں")}
               </ActionButton>
               {entered.length === 0 ? (
-                <span className="wfHint">Enter at least one fact.</span>
+                <span className="wfHint">{t("Enter at least one fact.", "کم از کم ایک حقیقت درج کریں۔")}</span>
               ) : notEntered.length > 0 ? (
                 <span className="wfHint">
-                  Not provided: {notEntered.map((field) => field.label).join(", ")}.
+                  {t("Not provided: ", "درج نہیں کیے گئے: ")}
+                  {notEntered.map((field) => t(field.label, field.labelUr)).join(t(", ", "، "))}
+                  {t(".", "۔")}
                 </span>
               ) : null}
             </div>
@@ -226,28 +257,32 @@ export default function TraceStage({
 
           {draft ? (
             <>
-              <StepTitle index={2}>Review and confirm (intake draft)</StepTitle>
+              <StepTitle index={2}>{t("Review and confirm (intake draft)", "جائزہ اور تصدیق (ابتدائی مسودہ)")}</StepTitle>
               <table className="wfTable">
                 <thead>
                   <tr>
-                    <th>Fact</th>
-                    <th>Value</th>
-                    <th>Unit</th>
+                    <th>{t("Fact", "حقیقت")}</th>
+                    <th>{t("Value", "قدر")}</th>
+                    <th>{t("Unit", "اکائی")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(draft.submitted_fields).map(([key, fact]) => (
                     <tr key={key}>
-                      <td>{fieldLabel(key)}</td>
-                      <td>{fact.value}</td>
-                      <td>{fact.unit ?? "—"}</td>
+                      <td>{fieldLabel(key, language)}</td>
+                      <td className="wfNum">{fact.value}</td>
+                      <td>{fact.unit ? unitLabel(fact.unit, language) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="wfHint">
-                Draft status: <Badge tone="warn">{draft.intake_status}</Badge> — unconfirmed facts are
-                never used in calculations.
+                {t("Draft status: ", "مسودے کی حیثیت: ")}
+                <Badge tone="warn">{rawTerm(draft.intake_status, language)}</Badge>
+                {t(
+                  " — unconfirmed facts are never used in calculations.",
+                  " — غیر تصدیق شدہ حقائق کبھی حساب میں استعمال نہیں ہوتے۔",
+                )}
               </p>
               <label className="wfCheck">
                 <input
@@ -255,14 +290,14 @@ export default function TraceStage({
                   checked={acknowledged}
                   onChange={(event) => setAcknowledged(event.target.checked)}
                 />
-                I confirm these facts are correct for my business.
+                {t("I confirm these facts are correct for my business.", "میں تصدیق کرتا/کرتی ہوں کہ یہ حقائق میرے کاروبار کے لیے درست ہیں۔")}
               </label>
               <div className="wfActions">
                 <ActionButton onClick={confirmDraft} busy={busy === "confirm"} disabled={!acknowledged}>
-                  Confirm business facts
+                  {t("Confirm business facts", "کاروباری حقائق کی تصدیق کریں")}
                 </ActionButton>
                 <ActionButton variant="secondary" onClick={() => setDraft(null)}>
-                  Edit facts
+                  {t("Edit facts", "حقائق میں ترمیم کریں")}
                 </ActionButton>
               </div>
             </>
@@ -270,52 +305,68 @@ export default function TraceStage({
 
           {profile ? (
             <>
-              <StepTitle index={3}>Confirmed business profile</StepTitle>
+              <StepTitle index={3}>{t("Confirmed business profile", "تصدیق شدہ کاروباری پروفائل")}</StepTitle>
               <KeyValues
                 rows={[
                   ...Object.entries(profile.confirmed_fields).map(
-                    ([key, fact]) => [fieldLabel(key), `${fact.value} ${fact.unit ?? ""}`] as [string, string],
+                    ([key, fact]) =>
+                      [
+                        fieldLabel(key, language),
+                        <span key={key}>
+                          <Ltr>{fact.value}</Ltr> {fact.unit ? unitLabel(fact.unit, language) : ""}
+                        </span>,
+                      ] as [string, React.ReactNode],
                   ),
-                  ["Business ID", <code key="b">{businessId}</code>],
-                  ["Profile ID", <code key="p">{profile.id}</code>],
+                  [t("Business ID", "کاروبار کی شناخت (ID)"), <code key="b">{businessId}</code>],
+                  [t("Profile ID", "پروفائل کی شناخت (ID)"), <code key="p">{profile.id}</code>],
                 ]}
               />
               <p className="wfHint">
-                To change a fact, edit the form above and submit a new draft. A new confirmed profile
-                replaces this one and the mapping must be requested again.
+                {t(
+                  "To change a fact, edit the form above and submit a new draft. A new confirmed profile replaces this one and the mapping must be requested again.",
+                  "کسی حقیقت کو بدلنے کے لیے اوپر فارم میں ترمیم کر کے نیا مسودہ جمع کریں۔ نیا تصدیق شدہ پروفائل اس کی جگہ لے گا اور نقشہ دوبارہ بنوانا ہوگا۔",
+                )}
               </p>
 
-              <StepTitle index={4}>Map the shock to your business</StepTitle>
+              <StepTitle index={4}>{t("Map the shock to your business", "جھٹکے کو اپنے کاروبار سے جوڑیں")}</StepTitle>
               {!mapping ? (
                 <div className="wfActions">
                   <ActionButton onClick={requestMapping} busy={busy === "map"}>
-                    Create impact mapping
+                    {t("Create impact mapping", "اثرات کا نقشہ بنائیں")}
                   </ActionButton>
                 </div>
               ) : null}
             </>
           ) : null}
 
-          {error ? <ErrorNotice error={error} title="TRACE did not complete" /> : null}
+          {error ? <ErrorNotice error={error} title={t("TRACE did not complete", "تجزیہ (TRACE) مکمل نہیں ہوا")} /> : null}
 
           {mapping ? (
             <>
               <div className="wfGraph">
                 {orderedPath(mapping).map(({ node, relationship }) => (
                   <div key={node.id} className="wfGraphStep">
-                    {relationship ? <div className="wfGraphEdge">↓ {relationship}</div> : null}
+                    {relationship ? (
+                      <div className="wfGraphEdge">
+                        ↓ <bdi dir="auto">{relationship}</bdi>
+                      </div>
+                    ) : null}
                     <div className="wfGraphNode">
-                      <small>{humanize(node.node_type)}</small>
-                      <strong>{node.label}</strong>
+                      <small>{term(node.node_type, language)}</small>
+                      <strong dir="auto">{node.label}</strong>
                     </div>
                   </div>
                 ))}
               </div>
               <p className="wfHint">
-                Mapping ID <code>{mapping.id}</code> — produced by the backend’s deterministic mapping
-                rules from your confirmed facts and the shock’s direction.
+                {t("Mapping ID ", "نقشے کی شناخت (ID) ")}
+                <code>{mapping.id}</code>
+                {t(
+                  " — produced by the backend’s deterministic mapping rules from your confirmed facts and the shock’s direction.",
+                  " — بیک اینڈ کے متعین اصولوں سے، آپ کے تصدیق شدہ حقائق اور جھٹکے کی سمت کی بنیاد پر تیار کیا گیا۔",
+                )}
               </p>
-              <NextStep href="#stage-quantify">Continue to QUANTIFY</NextStep>
+              <NextStep href="#stage-quantify">{t("Continue to QUANTIFY", "حساب (QUANTIFY) کی طرف بڑھیں")}</NextStep>
             </>
           ) : null}
         </>

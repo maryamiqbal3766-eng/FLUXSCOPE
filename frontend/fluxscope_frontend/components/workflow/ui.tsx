@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { ApiError } from "../../lib/api";
+import { useLanguage, useT } from "../../lib/i18n";
 import { fieldLabel, type StageStatus } from "../../lib/workflow";
 
 export function StatusPill({ status }: { status: StageStatus }) {
@@ -18,24 +19,36 @@ export function Badge({
   return <span className={`wfBadge wfBadge-${tone}`}>{children}</span>;
 }
 
+/** Left-to-right island for numbers, codes, URLs and IDs inside Urdu text. */
+export function Ltr({ children }: { children: ReactNode }) {
+  return (
+    <bdi dir="ltr" className="wfLtr">
+      {children}
+    </bdi>
+  );
+}
+
 /** Shows a backend contract error exactly as returned, plus the named fields. */
 export function ErrorNotice({ error, title }: { error: ApiError; title?: string }) {
+  const t = useT();
+  const language = useLanguage();
   return (
     <div className="wfNotice wfNotice-error" role="alert">
-      <strong>{title ?? "The backend did not complete this step"}</strong>
-      <p>{error.message}</p>
+      <strong>{title ?? t("The backend did not complete this step", "بیک اینڈ یہ مرحلہ مکمل نہیں کر سکا")}</strong>
+      {/* Backend messages are English; dir="auto" keeps their punctuation in place. */}
+      <p dir="auto">{error.message}</p>
       <div className="wfNoticeMeta">
         <code>{error.code}</code>
-        {error.status ? <span>HTTP {error.status}</span> : null}
-        {error.stage ? <span>Stage: {error.stage}</span> : null}
+        {error.status ? <span>HTTP <Ltr>{error.status}</Ltr></span> : null}
+        {error.stage ? <span>{t("Stage", "مرحلہ")}: <Ltr>{error.stage}</Ltr></span> : null}
       </div>
       {error.requiredFields.length > 0 ? (
         <div className="wfNoticeFields">
-          <span>Required / affected fields:</span>
+          <span>{t("Required / affected fields:", "درکار / متاثرہ خانے:")}</span>
           <ul>
             {error.requiredFields.map((field) => (
               <li key={field}>
-                {fieldLabel(field)} <code>{field}</code>
+                {fieldLabel(field, language)} <code>{field}</code>
               </li>
             ))}
           </ul>
@@ -63,11 +76,12 @@ export function InfoNotice({
 }
 
 export function LockedNotice({ requirement, href }: { requirement: string; href: string }) {
+  const t = useT();
   return (
-    <InfoNotice tone="locked" title="This stage is waiting for an earlier stage">
+    <InfoNotice tone="locked" title={t("This stage is waiting for an earlier stage", "یہ مرحلہ پچھلے مرحلے کا منتظر ہے")}>
       <p>{requirement}</p>
       <a className="wfLink" href={href}>
-        Go to the required stage ↑
+        {t("Go to the required stage ↑", "مطلوبہ مرحلے پر جائیں ↑")}
       </a>
     </InfoNotice>
   );
@@ -110,6 +124,7 @@ export function ActionButton({
   variant?: "primary" | "secondary";
   type?: "button" | "submit";
 }) {
+  const t = useT();
   return (
     <button
       type={type}
@@ -117,7 +132,7 @@ export function ActionButton({
       onClick={onClick}
       disabled={disabled || busy}
     >
-      {busy ? "Working…" : children}
+      {busy ? t("Working…", "کام جاری ہے…") : children}
     </button>
   );
 }
@@ -147,6 +162,7 @@ export function StageFrame({
   status: StageStatus;
   children: ReactNode;
 }) {
+  const language = useLanguage();
   return (
     <section id={id} className="workflowSection wfSection section">
       <div className="workflowNumber">0{number}</div>
@@ -159,7 +175,7 @@ export function StageFrame({
           <StatusPill status={status} />
         </div>
         <div className="wfExplain">{explanation}</div>
-        <div className="workflowPanel wfPanel" dir="ltr">
+        <div className="workflowPanel wfPanel" dir={language === "ur" ? "rtl" : "ltr"}>
           {children}
         </div>
       </div>

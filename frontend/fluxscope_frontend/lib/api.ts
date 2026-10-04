@@ -8,8 +8,9 @@
  * user input and displays what the backend returns.
  */
 
+// Set NEXT_PUBLIC_API_BASE_URL at build time for deployment; it is inlined by Next.js.
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "") || "http://localhost:8000";
 
 const API_PREFIX = "/api/v1";
 
@@ -59,7 +60,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiError(0, {
       code: "BACKEND_UNREACHABLE",
-      message: `The FLUXSCOPE API at ${API_BASE_URL} could not be reached. Start the backend and try again.`,
+      message: `No readable response from the FLUXSCOPE API at ${API_BASE_URL}. The backend may be stopped, or it failed while processing this request (check the backend log), or this page's origin is not allowed by CORS (use localhost:3000 or 3001).`,
     });
   }
 

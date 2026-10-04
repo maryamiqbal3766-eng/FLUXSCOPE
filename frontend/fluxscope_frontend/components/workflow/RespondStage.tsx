@@ -9,7 +9,8 @@ import {
   type ComparisonSet,
   type HumanDecision,
 } from "../../lib/api";
-import { formatDate, type StageStatus } from "../../lib/workflow";
+import { useLanguage, useT } from "../../lib/i18n";
+import { formatDate, rawTerm, type StageStatus } from "../../lib/workflow";
 import type { ScenarioRun } from "./SimulateStage";
 import {
   ActionButton,
@@ -18,6 +19,7 @@ import {
   InfoNotice,
   KeyValues,
   LockedNotice,
+  Ltr,
   NextStep,
   StageFrame,
   StepTitle,
@@ -34,6 +36,8 @@ type Props = {
 const OWNER_DEFINED = "owner-defined";
 
 export default function RespondStage({ status, comparison, runs, decision, onDecision }: Props) {
+  const t = useT();
+  const language = useLanguage();
   const [choice, setChoice] = useState("");
   const [ownerText, setOwnerText] = useState("");
   const [confirmedBy, setConfirmedBy] = useState("");
@@ -89,32 +93,40 @@ export default function RespondStage({ status, comparison, runs, decision, onDec
     <StageFrame
       id="stage-respond"
       number={6}
-      tag="▤ RESPOND"
-      title="What response will you take?"
+      tag={t("▤ RESPOND", "▤ عمل · RESPOND")}
+      title={t("What response will you take?", "آپ کیا ردِعمل اختیار کریں گے؟")}
       status={status}
       explanation={
         <>
           <p>
-            You make the decision. Choose one of the compared scenarios or describe your own response,
-            then confirm it explicitly. FLUXSCOPE records your choice and never selects one for you.
+            {t(
+              "You make the decision. Choose one of the compared scenarios or describe your own response, then confirm it explicitly. FLUXSCOPE records your choice and never selects one for you.",
+              "فیصلہ آپ کرتے ہیں۔ موازنہ شدہ منظرناموں میں سے ایک منتخب کریں یا اپنا ردِعمل خود بیان کریں، پھر واضح طور پر اس کی تصدیق کریں۔ FLUXSCOPE آپ کا انتخاب درج کرتا ہے اور کبھی آپ کی جگہ انتخاب نہیں کرتا۔",
+            )}
           </p>
           <p>
-            <b>Next:</b> MONITOR compares actual results against the projection of the response you
-            chose.
+            <b>{t("Next:", "اگلا قدم:")}</b>{" "}
+            {t(
+              "MONITOR compares actual results against the projection of the response you chose.",
+              "نگرانی (MONITOR) آپ کے منتخب ردِعمل کے تخمینے سے حقیقی نتائج کا موازنہ کرتی ہے۔",
+            )}
           </p>
         </>
       }
     >
       {!comparison ? (
         <LockedNotice
-          requirement="Compare at least one simulated scenario in COMPARE first. A decision references that comparison."
+          requirement={t(
+            "Compare at least one simulated scenario in COMPARE first. A decision references that comparison.",
+            "پہلے موازنہ (COMPARE) میں کم از کم ایک آزمائے گئے منظرنامے کا موازنہ کریں۔ فیصلہ اسی موازنے سے منسلک ہوتا ہے۔",
+          )}
           href="#stage-compare"
         />
       ) : (
         <>
           {!decision ? (
             <>
-              <StepTitle index={1}>Choose a response</StepTitle>
+              <StepTitle index={1}>{t("Choose a response", "ردِعمل منتخب کریں")}</StepTitle>
               <div className="wfChecks">
                 {options.map((run) => (
                   <label key={run.definition.id} className="wfCheck">
@@ -125,7 +137,7 @@ export default function RespondStage({ status, comparison, runs, decision, onDec
                       checked={choice === run.definition.id}
                       onChange={() => setChoice(run.definition.id)}
                     />
-                    {run.definition.name}
+                    <bdi dir="auto">{run.definition.name}</bdi>
                   </label>
                 ))}
                 <label className="wfCheck">
@@ -136,67 +148,83 @@ export default function RespondStage({ status, comparison, runs, decision, onDec
                     checked={choice === OWNER_DEFINED}
                     onChange={() => setChoice(OWNER_DEFINED)}
                   />
-                  My own response (not one of the scenarios)
+                  {t("My own response (not one of the scenarios)", "میرا اپنا ردِعمل (منظرناموں میں سے نہیں)")}
                 </label>
               </div>
               {choice === OWNER_DEFINED ? (
                 <>
                   <label className="wfField wfFieldWide">
-                    <span>Describe your response</span>
-                    <textarea rows={3} value={ownerText} onChange={(event) => setOwnerText(event.target.value)} />
+                    <span>{t("Describe your response", "اپنا ردِعمل بیان کریں")}</span>
+                    <textarea dir="auto" rows={3} value={ownerText} onChange={(event) => setOwnerText(event.target.value)} />
                   </label>
                   <InfoNotice tone="warn">
                     <p>
-                      An owner-defined response has no calculated projection, so MONITOR cannot compare
-                      actual results against it.
+                      {t(
+                        "An owner-defined response has no calculated projection, so MONITOR cannot compare actual results against it.",
+                        "مالک کے اپنے بیان کردہ ردِعمل کا کوئی حسابی تخمینہ نہیں ہوتا، اس لیے نگرانی (MONITOR) حقیقی نتائج کا اس سے موازنہ نہیں کر سکتی۔",
+                      )}
                     </p>
                   </InfoNotice>
                 </>
               ) : null}
               <div className="wfActions">
                 <ActionButton onClick={handleRecord} busy={busy === "record"} disabled={!canRecord}>
-                  Record my selection
+                  {t("Record my selection", "میرا انتخاب درج کریں")}
                 </ActionButton>
-                {!canRecord ? <span className="wfHint">Choose a response first.</span> : null}
+                {!canRecord ? (
+                  <span className="wfHint">{t("Choose a response first.", "پہلے ردِعمل منتخب کریں۔")}</span>
+                ) : null}
               </div>
             </>
           ) : (
             <>
-              <StepTitle index={1}>Your recorded response</StepTitle>
+              <StepTitle index={1}>{t("Your recorded response", "آپ کا درج کردہ ردِعمل")}</StepTitle>
               <KeyValues
                 rows={[
-                  ["Response", chosenName ?? decision.owner_defined_response ?? "—"],
+                  [t("Response", "ردِعمل"), <bdi key="r" dir="auto">{chosenName ?? decision.owner_defined_response ?? "—"}</bdi>],
                   [
-                    "Decision status",
+                    t("Decision status", "فیصلے کی حیثیت"),
                     <Badge key="s" tone={decision.decision_status === "confirmed" ? "ok" : "warn"}>
-                      {decision.decision_status}
+                      {rawTerm(decision.decision_status, language)}
                     </Badge>,
                   ],
-                  ["Confirmed by", decision.owner_confirmation_reference ?? "Not yet confirmed"],
-                  ["Decided at", formatDate(decision.decided_at)],
-                  ["Decision ID", <code key="d">{decision.id}</code>],
+                  [
+                    t("Confirmed by", "تصدیق کنندہ"),
+                    decision.owner_confirmation_reference ? (
+                      <bdi key="c" dir="auto">{decision.owner_confirmation_reference}</bdi>
+                    ) : (
+                      t("Not yet confirmed", "ابھی تصدیق نہیں ہوئی")
+                    ),
+                  ],
+                  [t("Decided at", "فیصلے کا وقت"), <Ltr key="d">{formatDate(decision.decided_at, language)}</Ltr>],
+                  [t("Decision ID", "فیصلے کی شناخت (ID)"), <code key="i">{decision.id}</code>],
                 ]}
               />
               {decision.decision_status === "selected" ? (
                 <>
-                  <StepTitle index={2}>Confirm the decision</StepTitle>
+                  <StepTitle index={2}>{t("Confirm the decision", "فیصلے کی تصدیق کریں")}</StepTitle>
                   <label className="wfField">
-                    <span>Confirmed by (owner name or reference)</span>
-                    <input value={confirmedBy} onChange={(event) => setConfirmedBy(event.target.value)} />
-                    <small>Recorded with the decision as the owner’s confirmation reference.</small>
+                    <span>{t("Confirmed by (owner name or reference)", "تصدیق کنندہ (مالک کا نام یا حوالہ)")}</span>
+                    <input dir="auto" value={confirmedBy} onChange={(event) => setConfirmedBy(event.target.value)} />
+                    <small>
+                      {t(
+                        "Recorded with the decision as the owner’s confirmation reference.",
+                        "یہ فیصلے کے ساتھ مالک کی تصدیق کے حوالے کے طور پر درج ہوگا۔",
+                      )}
+                    </small>
                   </label>
                   <div className="wfActions">
                     <ActionButton onClick={handleConfirm} busy={busy === "confirm"} disabled={!confirmedBy.trim()}>
-                      Confirm this decision
+                      {t("Confirm this decision", "اس فیصلے کی تصدیق کریں")}
                     </ActionButton>
                   </div>
                 </>
               ) : (
-                <NextStep href="#stage-monitor">Continue to MONITOR</NextStep>
+                <NextStep href="#stage-monitor">{t("Continue to MONITOR", "نگرانی (MONITOR) کی طرف بڑھیں")}</NextStep>
               )}
             </>
           )}
-          {error ? <ErrorNotice error={error} title="RESPOND did not complete" /> : null}
+          {error ? <ErrorNotice error={error} title={t("RESPOND did not complete", "عمل (RESPOND) مکمل نہیں ہوا")} /> : null}
         </>
       )}
     </StageFrame>
